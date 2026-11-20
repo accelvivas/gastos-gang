@@ -3,7 +3,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExpenseToast } from '@/components/ExpenseToast';
-import { spacing } from '@/theme/tokens';
+import { layout, spacing } from '@/theme/tokens';
 
 const toastConfig: ToastConfig = {
   expenseSaved: ({ text1, text2, props }) => (
@@ -23,9 +23,13 @@ export function AppToast() {
   const reduceMotion = useReducedMotion();
   return (
     <Toast
-      animationConfig={{ type: 'timing', duration: reduceMotion ? 0 : 180 }}
+      animationConfig={{
+        enter: { type: 'timing', duration: reduceMotion ? 0 : 220 },
+        exit: { type: 'timing', duration: reduceMotion ? 0 : 180 },
+      }}
       config={toastConfig}
-      topOffset={insets.top + spacing.md}
+      position="bottom"
+      bottomOffset={layout.tabBarHeight + insets.bottom + spacing.md}
     />
   );
 }

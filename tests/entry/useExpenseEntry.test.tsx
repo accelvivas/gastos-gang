@@ -41,7 +41,10 @@ describe('useExpenseEntry', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
 
   test('commits once, resets only after success, and undoes the exact inserted ID', async () => {
     jest.mocked(expensesRepo.create).mockResolvedValue(saved);
@@ -78,6 +81,7 @@ describe('useExpenseEntry', () => {
     expect(toastCall?.text1).toBe('GASTOS LOGGED, BOSS!');
     expect(toastCall?.text2).toBe('₱70.50 · Food');
     expect(toastCall?.props.joke).toBe('Bossing! Gutom ka o bored ka lang?');
+    expect(toastCall?.position).toBe('bottom');
     await act(async () => {
       await toastCall?.props.onUndo();
     });
@@ -131,4 +135,43 @@ describe('useExpenseEntry', () => {
     expect(expensesRepo.remove).toHaveBeenCalledTimes(1);
     expect(expensesRepo.remove).toHaveBeenCalledWith(mockDb, 43);
   });
+
+  test('allows Undo immediately before the five-second expiry', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(0));
+    jest.mocked(expensesRepo.create).mockResolvedValue(saved);
+    jest.mocked(expensesRepo.remove).mockResolvedValue(saved);
+    const { result } = await renderHook(() => useExpenseEntry({ onExpenseChanged: jest.fn() }));
+
+    await act(() => result.current.pressKey('1'));
+    await act(async () => result.current.saveForCategory(category));
+    const undoAction = jest.mocked(Toast.show).mock.calls[0]?.[0].props.onUndo;
+    await act(async () => {
+      jest.advanceTimersByTime(4_999);
+      await undoAction?.();
+    });
+
+    expect(expensesRepo.remove).toHaveBeenCalledWith(mockDb, saved.id);
+  });
+
+  test.each([5_000, 5_001])(
+    'rejects Undo at or after the five-second expiry (%i ms)',
+    async (elapsedMs) => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(0));
+      jest.mocked(expensesRepo.create).mockResolvedValue(saved);
+      jest.mocked(expensesRepo.remove).mockResolvedValue(saved);
+      const { result } = await renderHook(() => useExpenseEntry({ onExpenseChanged: jest.fn() }));
+
+      await act(() => result.current.pressKey('1'));
+      await act(async () => result.current.saveForCategory(category));
+      const undoAction = jest.mocked(Toast.show).mock.calls[0]?.[0].props.onUndo;
+      await act(async () => {
+        jest.advanceTimersByTime(elapsedMs);
+        await undoAction?.();
+      });
+
+      expect(expensesRepo.remove).not.toHaveBeenCalled();
+    }
+  );
 });

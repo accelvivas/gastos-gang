@@ -83,7 +83,7 @@ export function useExpenseEntry({
         type: 'expenseSaved',
         text1: undoneMessage,
         text2: 'Expense removed',
-        position: 'top',
+        position: 'bottom',
         visibilityTime: 1_800,
         autoHide: true,
         props: { kind: 'info' },
@@ -98,7 +98,7 @@ export function useExpenseEntry({
       Toast.show({
         type: 'expenseSaved',
         text1: message,
-        position: 'top',
+        position: 'bottom',
         visibilityTime: remainingTime,
         autoHide: true,
         props: {
@@ -126,7 +126,7 @@ export function useExpenseEntry({
         Toast.show({
           type: 'expenseSaved',
           text1: message,
-          position: 'top',
+          position: 'bottom',
           visibilityTime: 2_000,
           autoHide: true,
           props: { kind: 'error' },
@@ -166,7 +166,7 @@ export function useExpenseEntry({
           type: 'expenseSaved',
           text1: title,
           text2: message,
-          position: 'top',
+          position: 'bottom',
           visibilityTime: undoWindowMs,
           autoHide: true,
           props: {
@@ -185,7 +185,7 @@ export function useExpenseEntry({
         Toast.show({
           type: 'expenseSaved',
           text1: message,
-          position: 'top',
+          position: 'bottom',
           visibilityTime: 2_500,
           autoHide: true,
           props: { kind: 'error' },
