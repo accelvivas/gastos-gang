@@ -11,6 +11,7 @@ import {
   INITIAL_AMOUNT_DRAFT,
   type NumberPadKey,
 } from '@/features/entry/utils/amountInput';
+import { getRandomToastMessage } from '@/features/entry/utils/getRandomToastMessage';
 import { successHaptic, warningHaptic } from '@/lib/haptics';
 import { formatPeso } from '@/lib/money';
 import * as expensesRepo from '@/repositories/expensesRepo';
@@ -40,8 +41,9 @@ export function useExpenseEntry({
   const undoingRef = useRef(false);
   const undoTargetRef = useRef<UndoTarget | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const invalidCopyIndex = useRef(0);
-  const savedCopyIndex = useRef(0);
+  const undoRef = useRef<(expectedExpenseId?: number) => Promise<void>>(async () => undefined);
+  const mountedRef = useRef(true);
+  const lastToastMessageByCategory = useRef(new Map<string, string>());
   const undoneCopyIndex = useRef(0);
 
   const expireUndo = useCallback(() => {
@@ -50,10 +52,20 @@ export function useExpenseEntry({
     undoTimerRef.current = null;
   }, []);
 
-  useEffect(() => expireUndo, [expireUndo]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      expireUndo();
+      Toast.hide();
+    };
+  }, [expireUndo]);
 
-  const undo = useCallback(async () => {
+  const undo = useCallback(async (expectedExpenseId?: number) => {
     const target = undoTargetRef.current;
+    if (target && expectedExpenseId !== undefined && target.id !== expectedExpenseId) {
+      return;
+    }
     if (!target || undoingRef.current || now() >= target.expiresAt) {
       expireUndo();
       Toast.hide();
@@ -64,25 +76,44 @@ export function useExpenseEntry({
       await expensesRepo.remove(db, target.id);
       expireUndo();
       Toast.hide();
+      if (!mountedRef.current) return;
       void onExpenseChanged();
       const undoneMessage = copyAt(gastosCopy.undone, undoneCopyIndex.current++);
       Toast.show({
         type: 'expenseSaved',
         text1: undoneMessage,
         text2: 'Expense removed',
-        position: 'bottom',
+        position: 'top',
         visibilityTime: 1_800,
         autoHide: true,
-        props: {},
+        props: { kind: 'info' },
       });
       void AccessibilityInfo.announceForAccessibility(undoneMessage);
     } catch {
       warningHaptic();
-      setError('Could not undo. Please try again.');
+      if (!mountedRef.current) return;
+      const message = 'Hindi ma-undo, boss. Try ulit.';
+      setError(message);
+      const remainingTime = Math.max(500, target.expiresAt - now());
+      Toast.show({
+        type: 'expenseSaved',
+        text1: message,
+        position: 'top',
+        visibilityTime: remainingTime,
+        autoHide: true,
+        props: {
+          kind: 'error',
+          onUndo: () => undoRef.current(target.id),
+        },
+      });
     } finally {
       undoingRef.current = false;
     }
   }, [db, expireUndo, now, onExpenseChanged]);
+
+  useEffect(() => {
+    undoRef.current = undo;
+  }, [undo]);
 
   const saveForCategory = useCallback(
     async (category: Category) => {
@@ -90,7 +121,16 @@ export function useExpenseEntry({
       if (savingRef.current) return;
       if (amountCentavos === null) {
         warningHaptic();
-        setError(copyAt(gastosCopy.invalidAmount, invalidCopyIndex.current++));
+        const message = 'Bossing, magkano muna?';
+        setError(message);
+        Toast.show({
+          type: 'expenseSaved',
+          text1: message,
+          position: 'top',
+          visibilityTime: 2_000,
+          autoHide: true,
+          props: { kind: 'error' },
+        });
         return;
       }
 
@@ -104,6 +144,7 @@ export function useExpenseEntry({
           note: note.trim() || null,
           createdAt: now(),
         });
+        if (!mountedRef.current) return;
         expireUndo();
         const expiresAt = now() + undoWindowMs;
         undoTargetRef.current = { id: expense.id, expiresAt };
@@ -113,24 +154,45 @@ export function useExpenseEntry({
         setResetCount((count) => count + 1);
         successHaptic();
         void onExpenseChanged();
-        const title = copyAt(gastosCopy.saved, savedCopyIndex.current++);
-        const message = `${formatPeso(amountCentavos)} saved to ${category.name}`;
+        const categoryKey = category.name.trim().toLowerCase() || '__custom__';
+        const joke = getRandomToastMessage(
+          category.name,
+          lastToastMessageByCategory.current.get(categoryKey)
+        );
+        lastToastMessageByCategory.current.set(categoryKey, joke);
+        const title = 'GASTOS LOGGED, BOSS!';
+        const message = `${formatPeso(amountCentavos)} · ${category.name}`;
         Toast.show({
           type: 'expenseSaved',
           text1: title,
           text2: message,
-          position: 'bottom',
+          position: 'top',
           visibilityTime: undoWindowMs,
           autoHide: true,
-          props: { onUndo: undo },
+          props: {
+            accentColor: category.color,
+            joke,
+            kind: 'success',
+            onUndo: () => undo(expense.id),
+          },
         });
-        void AccessibilityInfo.announceForAccessibility(`${title} ${message}`);
-      } catch (saveError) {
+        void AccessibilityInfo.announceForAccessibility(`${title} ${message}. ${joke}`);
+      } catch {
         warningHaptic();
-        setError(saveError instanceof Error ? saveError.message : 'Could not save expense.');
+        if (!mountedRef.current) return;
+        const message = 'Hindi na-save, boss. Try ulit.';
+        setError(message);
+        Toast.show({
+          type: 'expenseSaved',
+          text1: message,
+          position: 'top',
+          visibilityTime: 2_500,
+          autoHide: true,
+          props: { kind: 'error' },
+        });
       } finally {
         savingRef.current = false;
-        setIsSaving(false);
+        if (mountedRef.current) setIsSaving(false);
       }
     }, [amountDraft, db, expireUndo, note, now, onExpenseChanged, undo, undoWindowMs]
   );

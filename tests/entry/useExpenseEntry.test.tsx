@@ -36,7 +36,12 @@ const saved: Expense = {
 };
 
 describe('useExpenseEntry', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
 
   test('commits once, resets only after success, and undoes the exact inserted ID', async () => {
     jest.mocked(expensesRepo.create).mockResolvedValue(saved);
@@ -70,8 +75,9 @@ describe('useExpenseEntry', () => {
 
     const toastCall = jest.mocked(Toast.show).mock.calls[0]?.[0];
     expect(toastCall).toBeDefined();
-    expect(toastCall?.text1).toBe('SOLID, BOSSING!');
-    expect(toastCall?.text2).toBe('₱70.50 saved to Food');
+    expect(toastCall?.text1).toBe('GASTOS LOGGED, BOSS!');
+    expect(toastCall?.text2).toBe('₱70.50 · Food');
+    expect(toastCall?.props.joke).toBe('Bossing! Gutom ka o bored ka lang?');
     await act(async () => {
       await toastCall?.props.onUndo();
     });
@@ -91,6 +97,38 @@ describe('useExpenseEntry', () => {
     });
     expect(result.current.amountDraft).toBe('9');
     expect(result.current.note).toBe('Coffee');
-    expect(result.current.error).toBe('Disk unavailable');
+    expect(result.current.error).toBe('Hindi na-save, boss. Try ulit.');
+    expect(jest.mocked(Toast.show).mock.calls[0]?.[0].props.kind).toBe('error');
+  });
+
+  test('avoids consecutive joke repeats and rejects a stale Undo callback', async () => {
+    const secondSaved = { ...saved, id: 43, amountCentavos: 200 };
+    jest.mocked(expensesRepo.create)
+      .mockResolvedValueOnce(saved)
+      .mockResolvedValueOnce(secondSaved);
+    jest.mocked(expensesRepo.remove).mockResolvedValue(secondSaved);
+    const { result } = await renderHook(() =>
+      useExpenseEntry({ onExpenseChanged: jest.fn(), now: () => 1_000 })
+    );
+
+    await act(() => result.current.pressKey('1'));
+    await act(async () => result.current.saveForCategory(category));
+    const firstToast = jest.mocked(Toast.show).mock.calls[0]?.[0];
+
+    await act(() => result.current.pressKey('2'));
+    await act(async () => result.current.saveForCategory(category));
+    const secondToast = jest.mocked(Toast.show).mock.calls[1]?.[0];
+
+    expect(firstToast?.props.joke).toBe('Bossing! Gutom ka o bored ka lang?');
+    expect(secondToast?.props.joke).toBe(
+      'Kain ka nang kain, boss. Yung wallet mo nagpapapayat!'
+    );
+
+    await act(async () => firstToast?.props.onUndo());
+    expect(expensesRepo.remove).not.toHaveBeenCalled();
+
+    await act(async () => secondToast?.props.onUndo());
+    expect(expensesRepo.remove).toHaveBeenCalledTimes(1);
+    expect(expensesRepo.remove).toHaveBeenCalledWith(mockDb, 43);
   });
 });
