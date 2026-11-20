@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "gastos-gang",
+    "name": "Gastos Gang",
     "slug": "gastos-gang",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,7 +28,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#6C4DFF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
