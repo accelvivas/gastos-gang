@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 export default function RootLayout() {
@@ -26,21 +27,24 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={navigationTheme}>
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.background },
-            headerStyle: { backgroundColor: colors.surface },
-            headerTintColor: colors.text,
-          }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="expense/[id]"
-            options={{ presentation: 'modal', title: 'Edit expense' }}
-          />
-        </Stack>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-      </ThemeProvider>
+      <DatabaseProvider>
+        <ThemeProvider value={navigationTheme}>
+          <Stack
+            screenOptions={{
+              contentStyle: { backgroundColor: colors.background },
+              headerStyle: { backgroundColor: colors.surface },
+              headerTintColor: colors.text,
+            }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="expense/[id]"
+              options={{ presentation: 'modal', title: 'Edit expense' }}
+            />
+            {__DEV__ ? <Stack.Screen name="dev-db" options={{ title: 'Database check' }} /> : null}
+          </Stack>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+        </ThemeProvider>
+      </DatabaseProvider>
     </GestureHandlerRootView>
   );
 }

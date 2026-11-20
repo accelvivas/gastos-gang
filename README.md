@@ -20,9 +20,9 @@ npm test
 ## Architecture decisions
 
 - Routes live in `src/app` and stay thin; feature logic belongs in `src/features`.
-- Expense data will use SQLite as its source of truth. Zustand is limited to lightweight UI and settings state.
+- Expense data uses SQLite as its source of truth. Zustand is limited to lightweight UI and settings state.
 - Money is represented as integer centavos throughout the app.
 - Stored timestamps will use epoch milliseconds. Display and day grouping will use the device's local timezone.
 - Charts will begin with dependency-free React Native views; a chart package will only be added if Phase 4 needs it.
 
-The project is being delivered in verified phases. The full setup, usage, and troubleshooting guide will be completed during Phase 6.
+Phase 1 includes the versioned SQLite schema, repositories, deterministic money/date helpers, and Node-backed database tests. The full setup, usage, and troubleshooting guide will be completed during Phase 6.

@@ -1,15 +1,16 @@
+import type { PropsWithChildren } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { layout, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-type ScreenPlaceholderProps = {
+type ScreenPlaceholderProps = PropsWithChildren<{
   title: string;
   description: string;
-};
+}>;
 
-export function ScreenPlaceholder({ title, description }: ScreenPlaceholderProps) {
+export function ScreenPlaceholder({ title, description, children }: ScreenPlaceholderProps) {
   const { colors } = useAppTheme();
 
   return (
@@ -19,6 +20,7 @@ export function ScreenPlaceholder({ title, description }: ScreenPlaceholderProps
           {title}
         </Text>
         <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+        {children}
       </View>
     </SafeAreaView>
   );
