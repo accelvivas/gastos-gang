@@ -132,6 +132,13 @@ export async function create(db: DbLike, input: CreateExpenseInput): Promise<Exp
 
   try {
     await db.withExclusiveTransactionAsync(async (txn) => {
+      const activeCategory = await txn.getFirstAsync<{ id: number }>(
+        'SELECT id FROM categories WHERE id = ? AND is_archived = 0',
+        [input.categoryId]
+      );
+      if (!activeCategory) {
+        throw new AppError('CONSTRAINT', 'The selected category is no longer available.');
+      }
       const result = await txn.runAsync(
         `INSERT INTO expenses
           (amount_centavos, category_id, note, created_at, local_day, updated_at)

@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AppToast } from '@/components/AppToast';
 import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -43,6 +44,7 @@ export default function RootLayout() {
             {__DEV__ ? <Stack.Screen name="dev-db" options={{ title: 'Database check' }} /> : null}
           </Stack>
           <StatusBar style={isDark ? 'light' : 'dark'} />
+          <AppToast />
         </ThemeProvider>
       </DatabaseProvider>
     </GestureHandlerRootView>

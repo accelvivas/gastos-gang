@@ -77,6 +77,19 @@ describe('expenses repository', () => {
     ).rejects.toMatchObject({ code: 'CONSTRAINT' });
   });
 
+  test('create rejects an archived category', async () => {
+    const category = categories[0];
+    expect(category).toBeDefined();
+    await categoriesRepo.archive(db, category!.id);
+
+    await expect(
+      expensesRepo.create(db, { amountCentavos: 1_300, categoryId: category!.id })
+    ).rejects.toMatchObject({
+      code: 'CONSTRAINT',
+      message: 'The selected category is no longer available.',
+    });
+  });
+
   test('keyset pagination does not skip or duplicate identical timestamps', async () => {
     const category = categories[0];
     expect(category).toBeDefined();

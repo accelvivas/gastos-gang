@@ -15,55 +15,51 @@ export type ThemeColors = {
   overlay: string;
 };
 
-const palette = {
-  white: '#FFFFFF',
-  cloud: '#F7F6FA',
-  mist: '#EFEDF5',
-  silver: '#D8D4E2',
-  graphite: '#6F697B',
-  ink: '#201B2C',
-  night: '#15111E',
-  nightRaised: '#211B2D',
-  nightMuted: '#2B2438',
-  nightBorder: '#3D354B',
-  lavender: '#9D8CFF',
-  violet: '#6C4DFF',
-  violetPressed: '#5538DE',
-  mint: '#2EAD75',
-  amber: '#D99020',
-  coral: '#D94B5B',
-  blackOverlay: 'rgba(0, 0, 0, 0.45)',
+export const streetColors = {
+  background: '#111714',
+  lime: '#C9FC39',
+  limePressed: '#AEE52C',
+  surface: '#202C24',
+  surfaceElevated: '#293A30',
+  cream: '#F3F3E8',
+  muted: '#9DADA3',
+  border: '#526558',
+  orange: '#FF805C',
+  peach: '#FFA58B',
+  olive: '#3B5133',
+  brown: '#62463A',
+  danger: '#FF6B6B',
+  dot: '#264334',
+  black: '#101612',
+  overlay: 'rgba(0, 0, 0, 0.45)',
+  category: {
+    food: '#FFB347',
+    transport: '#60A5FA',
+    load: '#C084FC',
+    shopping: '#F472B6',
+    bills: '#6EE7B7',
+    other: '#E4E2D6',
+  },
 } as const;
 
+const streetTheme: ThemeColors = {
+  background: streetColors.background,
+  surface: streetColors.surface,
+  surfaceMuted: streetColors.surfaceElevated,
+  text: streetColors.cream,
+  textMuted: streetColors.muted,
+  primary: streetColors.lime,
+  primaryPressed: streetColors.limePressed,
+  border: streetColors.border,
+  success: streetColors.lime,
+  warning: streetColors.orange,
+  danger: streetColors.danger,
+  overlay: streetColors.overlay,
+};
+
 export const themes: Record<'light' | 'dark', ThemeColors> = {
-  light: {
-    background: palette.cloud,
-    surface: palette.white,
-    surfaceMuted: palette.mist,
-    text: palette.ink,
-    textMuted: palette.graphite,
-    primary: palette.violet,
-    primaryPressed: palette.violetPressed,
-    border: palette.silver,
-    success: palette.mint,
-    warning: palette.amber,
-    danger: palette.coral,
-    overlay: palette.blackOverlay,
-  },
-  dark: {
-    background: palette.night,
-    surface: palette.nightRaised,
-    surfaceMuted: palette.nightMuted,
-    text: palette.white,
-    textMuted: palette.silver,
-    primary: palette.lavender,
-    primaryPressed: palette.violet,
-    border: palette.nightBorder,
-    success: palette.mint,
-    warning: palette.amber,
-    danger: palette.coral,
-    overlay: palette.blackOverlay,
-  },
+  light: streetTheme,
+  dark: streetTheme,
 };
 
 export const spacing = {
@@ -80,21 +76,22 @@ export const radii = {
   sm: 8,
   md: 12,
   lg: 18,
+  xl: 28,
   pill: 999,
 } as const;
 
 export const typography = {
-  amount: { fontSize: 48, lineHeight: 58, fontWeight: '700' },
-  title: { fontSize: 30, lineHeight: 38, fontWeight: '700' },
-  heading: { fontSize: 20, lineHeight: 26, fontWeight: '600' },
+  amount: { fontSize: 58, lineHeight: 66, fontWeight: '900', letterSpacing: -2 },
+  title: { fontSize: 40, lineHeight: 44, fontWeight: '900', letterSpacing: -1.5 },
+  heading: { fontSize: 20, lineHeight: 26, fontWeight: '800', letterSpacing: 0.4 },
   body: { fontSize: 16, lineHeight: 24, fontWeight: '400' },
-  label: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  label: { fontSize: 14, lineHeight: 20, fontWeight: '800' },
   caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' },
-  tabLabel: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  tabLabel: { fontSize: 11, lineHeight: 15, fontWeight: '800', letterSpacing: 0.4 },
 } satisfies Record<string, TextStyle>;
 
 export const layout = {
   minimumTapTarget: 44,
-  tabBarHeight: 64,
+  tabBarHeight: 76,
   contentMaxWidth: 560,
 } as const;

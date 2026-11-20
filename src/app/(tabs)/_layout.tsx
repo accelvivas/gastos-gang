@@ -1,10 +1,28 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { layout, typography } from '@/theme/tokens';
+import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
+
+type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({ focused, name }: { focused: boolean; name: TabIconName }) {
+  return (
+    <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+      <Ionicons
+        name={name}
+        size={focused ? 25 : 24}
+        color={focused ? streetColors.background : streetColors.muted}
+      />
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -15,15 +33,24 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          minHeight: layout.tabBarHeight,
+          borderTopWidth: 1.5,
+          height: layout.tabBarHeight + insets.bottom,
+          paddingTop: spacing.xs,
         },
         tabBarItemStyle: { minHeight: layout.minimumTapTarget },
-        tabBarLabelStyle: typography.tabLabel,
+        tabBarIconStyle: styles.iconSlot,
+        tabBarLabelStyle: { ...typography.tabLabel, textTransform: 'uppercase' },
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Entry' }} />
-      <Tabs.Screen name="history" options={{ title: 'History' }} />
-      <Tabs.Screen name="summary" options={{ title: 'Summary' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+      <Tabs.Screen name="index" options={{ title: 'Entry', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="home" /> }} />
+      <Tabs.Screen name="history" options={{ title: 'History', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="time-outline" /> }} />
+      <Tabs.Screen name="summary" options={{ title: 'Summary', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="receipt-outline" /> }} />
+      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="settings-outline" /> }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconSlot: { height: 42, marginBottom: 8 },
+  iconContainer: { width: 52, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radii.lg },
+  iconContainerActive: { backgroundColor: streetColors.lime },
+});

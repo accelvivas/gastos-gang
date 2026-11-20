@@ -11,7 +11,7 @@ export function useAppTheme() {
 
   return {
     colors: themes[resolvedTheme],
-    isDark: resolvedTheme === 'dark',
+    isDark: true,
     resolvedTheme,
     themePreference,
   } as const;
