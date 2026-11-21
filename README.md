@@ -10,7 +10,9 @@ Gastos Gang is an offline-first personal expense tracker. Log an expense with a 
 
 ## Download for Android
 
-The standalone Android APK is pending publication. Check [GitHub Releases](https://github.com/accelvivas/gastos-gang/releases) for release notes and verified APK assets when available.
+**[Download Gastos Gang v1.0.0 Beta 1 for Android](https://github.com/accelvivas/gastos-gang/releases/download/v1.0.0-beta.1/GastosGang-v1.0.0-beta.1.apk)** · 117 MB · Android 7.0+
+
+This is a beta release. See the [release notes](https://github.com/accelvivas/gastos-gang/releases/tag/v1.0.0-beta.1) for details.
 
 1. Download the APK attached to an official Gastos Gang release.
 2. Open the downloaded file. If Android prompts you, allow installation from the trusted app you used to open it.
