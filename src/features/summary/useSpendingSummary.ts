@@ -29,6 +29,8 @@ export function useSpendingSummary() {
   const refresh = useCallback(async () => {
     if (!focused.current) return;
     const id = ++requestId.current;
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = null;
     const cutoffMs = Date.now();
     const day = todayKey(cutoffMs);
     setState((previous) => ({
@@ -44,13 +46,11 @@ export function useSpendingSummary() {
         if (refreshTimer.current) clearTimeout(refreshTimer.current);
         const now = new Date(cutoffMs);
         const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        const midnightDelay = Math.max(100, tomorrow.getTime() - cutoffMs + 100);
-        const futureDelay = nextFuture === null ? null : Math.max(1, nextFuture - cutoffMs);
-        const delay = futureDelay === null ? midnightDelay : Math.min(midnightDelay, futureDelay);
+        const refreshAt = Math.min(tomorrow.getTime() + 100, nextFuture ?? Infinity);
         refreshTimer.current = setTimeout(() => {
           refreshTimer.current = null;
           refreshRef.current();
-        }, delay);
+        }, Math.max(1, refreshAt - Date.now()));
       }
     } catch {
       if (id === requestId.current) setState({ period, day, data: null, status: 'error' });

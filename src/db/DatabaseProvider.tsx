@@ -1,27 +1,40 @@
 import { SQLiteProvider } from 'expo-sqlite';
-import { Component, type ErrorInfo, type PropsWithChildren, Suspense } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Component, type PropsWithChildren, Suspense } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { initDatabase } from '@/db/client';
-import { layout, spacing, typography } from '@/theme/tokens';
+import { LaunchLogo } from '@/components/startup/LaunchLogo';
+import { LaunchWordmark } from '@/components/startup/LaunchWordmark';
+import { initDatabase, type DbLike } from '@/db/client';
+import { hydrateThemePreference } from '@/theme/theme-storage';
+import { layout, spacing, streetColors, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 const DATABASE_NAME = 'gastos-gang.db';
+
+async function initializeDatabase(db: DbLike): Promise<void> {
+  await initDatabase(db);
+  await hydrateThemePreference(db);
+}
 
 type ErrorBoundaryState = {
   error: Error | null;
 };
 
-class DatabaseErrorBoundary extends Component<PropsWithChildren, ErrorBoundaryState> {
+type DatabaseErrorBoundaryProps = PropsWithChildren<{
+  onError?: (error: Error) => void;
+}>;
+
+class DatabaseErrorBoundary extends Component<DatabaseErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error('Database initialization failed.', error, info.componentStack);
+  componentDidCatch(error: Error): void {
+    console.error('Database initialization failed.');
+    this.props.onError?.(error);
   }
 
   render() {
@@ -33,11 +46,12 @@ class DatabaseErrorBoundary extends Component<PropsWithChildren, ErrorBoundarySt
 }
 
 function DatabaseLoadingScreen() {
-  const { colors } = useAppTheme();
   return (
-    <View style={[styles.centered, { backgroundColor: colors.background }]}>
-      <Text style={[styles.body, { color: colors.textMuted }]}>Preparing your gastos…</Text>
-    </View>
+    <SafeAreaView style={[styles.centered, styles.launchLoading]}>
+      <LaunchLogo size={76} />
+      <LaunchWordmark />
+      <ActivityIndicator accessibilityLabel="Preparing your gastos" color={streetColors.lime} />
+    </SafeAreaView>
   );
 }
 
@@ -57,11 +71,14 @@ function DatabaseErrorScreen() {
   );
 }
 
-export function DatabaseProvider({ children }: PropsWithChildren) {
+export function DatabaseProvider({
+  children,
+  onError,
+}: PropsWithChildren<{ onError?: (error: Error) => void }>) {
   return (
-    <DatabaseErrorBoundary>
+    <DatabaseErrorBoundary onError={onError}>
       <Suspense fallback={<DatabaseLoadingScreen />}>
-        <SQLiteProvider databaseName={DATABASE_NAME} onInit={initDatabase} useSuspense>
+        <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase} useSuspense>
           {children}
         </SQLiteProvider>
       </Suspense>
@@ -75,6 +92,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  launchLoading: { backgroundColor: streetColors.background, gap: spacing.md, paddingHorizontal: spacing.xl },
   content: {
     width: '100%',
     maxWidth: layout.contentMaxWidth,

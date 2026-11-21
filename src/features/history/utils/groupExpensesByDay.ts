@@ -17,6 +17,8 @@ export function groupExpensesByDay(
   nowMs = Date.now()
 ): HistorySection[] {
   const grouped = new Map<string, ExpenseWithCategory[]>();
+  const compare = (left: ExpenseWithCategory, right: ExpenseWithCategory) =>
+    right.createdAt - left.createdAt || right.id - left.id;
 
   for (const expense of expenses) {
     const rows = grouped.get(expense.localDay) ?? [];
@@ -31,8 +33,8 @@ export function groupExpensesByDay(
       title: historyDayTitle(key, nowMs),
       totalCentavos:
         totalsByDay.get(key) ?? rows.reduce((sum, expense) => sum + expense.amountCentavos, 0),
-      data: [...rows].sort(
-        (left, right) => right.createdAt - left.createdAt || right.id - left.id
-      ),
+      data: rows.every((row, index) => index === 0 || compare(rows[index - 1]!, row) <= 0)
+        ? rows
+        : rows.sort(compare),
     }));
 }

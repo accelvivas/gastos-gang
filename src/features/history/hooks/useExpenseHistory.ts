@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ExpenseWithCategory } from '@/db/types';
+import { subscribeToExpenseChanges } from '@/lib/expenseChanges';
 import { useDeleteExpense } from '@/features/history/hooks/useDeleteExpense';
 import { groupExpensesByDay } from '@/features/history/utils/groupExpensesByDay';
 import * as expensesRepo from '@/repositories/expensesRepo';
@@ -55,8 +56,10 @@ export function useExpenseHistory(
   const refresh = useCallback(async () => {
     const version = ++requestVersionRef.current;
     refreshingRef.current = true;
+    loadingMoreRef.current = false;
     setError(null);
     setPaginationError(null);
+    setIsLoadingMore(false);
     setIsRefreshing(true);
 
     try {
@@ -83,17 +86,10 @@ export function useExpenseHistory(
     }
   }, [db, filters]);
 
-  const latestRefreshRef = useRef(refresh);
-  useEffect(() => {
-    latestRefreshRef.current = refresh;
-  }, [refresh]);
-  const refreshAfterMutation = useCallback(() => latestRefreshRef.current(), []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void refresh();
-    }, [refresh])
-  );
+  useFocusEffect(useCallback(() => {
+    void refresh();
+    return subscribeToExpenseChanges(() => void refresh());
+  }, [refresh]));
 
   const loadMore = useCallback(async () => {
     if (criteriaPending || refreshingRef.current || loadingMoreRef.current || !hasMore || expenses.length === 0) return;
@@ -111,11 +107,8 @@ export function useExpenseHistory(
         ...(filters && { filters }),
       });
       if (!mountedRef.current || version !== requestVersionRef.current) return;
-      const byId = new Map(expenses.map((expense) => [expense.id, expense]));
-      for (const row of rows) byId.set(row.id, row);
-      const merged = [...byId.values()].sort(
-        (left, right) => right.createdAt - left.createdAt || right.id - left.id
-      );
+      const existingIds = new Set(expenses.map((expense) => expense.id));
+      const merged = [...expenses, ...rows.filter((row) => !existingIds.has(row.id))];
       const totals = await totalsForRows(db, rows, filters);
       if (!mountedRef.current || version !== requestVersionRef.current) return;
       setExpenses(merged);
@@ -126,12 +119,14 @@ export function useExpenseHistory(
         setPaginationError('Hindi ma-load ang iba pang gastos.');
       }
     } finally {
-      loadingMoreRef.current = false;
-      if (mountedRef.current) setIsLoadingMore(false);
+      if (mountedRef.current && version === requestVersionRef.current) {
+        loadingMoreRef.current = false;
+        setIsLoadingMore(false);
+      }
     }
   }, [criteriaPending, db, expenses, filters, hasMore]);
 
-  const { deleteExpense, undoDelete } = useDeleteExpense({ now, onChanged: refreshAfterMutation });
+  const { deleteExpense, undoDelete } = useDeleteExpense({ now });
 
   const sections = useMemo(
     () => groupExpensesByDay(expenses, totalsByDay, now()),

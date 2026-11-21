@@ -52,6 +52,13 @@ export type ExpensePageOptions = {
   };
 };
 
+export type ExpenseExportCursor = {
+  createdAt: number;
+  id: number;
+};
+
+export const EXPENSE_EXPORT_PAGE_SIZE = 500;
+
 export type ExpenseHistoryFilters = {
   search?: string;
   categoryId?: number;
@@ -349,8 +356,8 @@ export async function listPage(
     const { clauses, args } = historyPredicates(options.filters);
     if (options.cursor) {
       const { createdAt, id } = options.cursor;
-      clauses.push('(e.created_at < ? OR (e.created_at = ? AND e.id < ?))');
-      args.push(createdAt, createdAt, id);
+      clauses.push('(e.created_at, e.id) < (?, ?)');
+      args.push(createdAt, id);
     }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const rows = await db.getAllAsync<ExpenseWithCategoryRow>(
@@ -366,6 +373,26 @@ export async function listPage(
 
 export async function totalForDay(db: DbLike, key: string): Promise<number> {
   return totalForRange(db, key, key);
+}
+
+export async function totalForDayAt(
+  db: DbLike,
+  key: string,
+  cutoffMs: number
+): Promise<number> {
+  validateDayRange(key, key);
+  validateTimestamp(cutoffMs);
+  try {
+    const row = await db.getFirstAsync<{ total_centavos: number }>(
+      `SELECT COALESCE(SUM(amount_centavos), 0) AS total_centavos
+       FROM expenses
+       WHERE local_day = ? AND created_at <= ?`,
+      [key, cutoffMs]
+    );
+    return row?.total_centavos ?? 0;
+  } catch (error) {
+    return wrapDatabaseError(error, 'Unable to calculate expense total.');
+  }
 }
 
 export async function totalForRange(
@@ -565,6 +592,40 @@ export async function listAllForExport(db: DbLike): Promise<ExportExpense[]> {
     const rows = await db.getAllAsync<ExpenseWithCategoryRow>(
       `${EXPENSE_WITH_CATEGORY_SELECT}
        ORDER BY e.created_at ASC, e.id ASC`
+    );
+    return rows.map(mapExpenseWithCategoryRow);
+  } catch (error) {
+    return wrapDatabaseError(error, 'Unable to load expenses for export.');
+  }
+}
+
+export async function listExportPage(
+  db: DbLike,
+  cursor?: ExpenseExportCursor,
+  limit = EXPENSE_EXPORT_PAGE_SIZE
+): Promise<ExportExpense[]> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) {
+    throw new AppError('VALIDATION', 'Export page limit must be between 1 and 1000.');
+  }
+  if (cursor) {
+    validateTimestamp(cursor.createdAt);
+    validatePositiveInteger(cursor.id, 'Export cursor ID');
+  }
+
+  const cursorClause = cursor
+    ? 'WHERE e.created_at > ? OR (e.created_at = ? AND e.id > ?)'
+    : '';
+  const args = cursor
+    ? [cursor.createdAt, cursor.createdAt, cursor.id, limit]
+    : [limit];
+
+  try {
+    const rows = await db.getAllAsync<ExpenseWithCategoryRow>(
+      `${EXPENSE_WITH_CATEGORY_SELECT}
+       ${cursorClause}
+       ORDER BY e.created_at ASC, e.id ASC
+       LIMIT ?`,
+      args
     );
     return rows.map(mapExpenseWithCategoryRow);
   } catch (error) {

@@ -15,9 +15,12 @@ import { useExpenseHistory } from '@/features/history/hooks/useExpenseHistory';
 import type { HistorySection } from '@/features/history/types';
 import { defaultHistoryFilter, historyRange, periods } from '@/features/history/utils/historyFilters';
 import { todayKey } from '@/lib/dates';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { subscribeToDataReplacement } from '@/lib/expenseChanges';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 export function HistoryScreen() {
+  const { colors } = useAppTheme();
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -48,6 +51,18 @@ export function HistoryScreen() {
   };
   const deleteExpense = history.deleteExpense;
   const openRowRef = useRef<{ id: number; methods: SwipeableMethods } | null>(null);
+
+  useEffect(() => subscribeToDataReplacement(() => {
+    setSearchOpen(false);
+    setSearch('');
+    setDebouncedSearch('');
+    setFilter(defaultHistoryFilter());
+    setAppliedCategoryName(undefined);
+    setFilterOpen(false);
+    Keyboard.dismiss();
+    openRowRef.current?.methods.close();
+    openRowRef.current = null;
+  }), []);
 
   const openEditor = useCallback((expense: ExpenseWithCategory) => {
     router.push({ pathname: '/expense/[id]', params: { id: String(expense.id) } });
@@ -90,12 +105,12 @@ export function HistoryScreen() {
 
   const searching = search.trim() !== debouncedSearch;
   const empty = history.isLoading || searching ? (
-    <ActivityIndicator accessibilityLabel="Loading expense history" color={streetColors.lime} style={styles.centered} />
+    <ActivityIndicator accessibilityLabel="Loading expense history" color={colors.primary} style={styles.centered} />
   ) : history.error ? (
     <View style={styles.centered}>
-      <Text accessibilityLiveRegion="assertive" style={styles.error}>{history.error}</Text>
+      <Text accessibilityLiveRegion="assertive" style={[styles.error, { color: colors.warning }]}>{history.error}</Text>
       <Pressable accessibilityRole="button" onPress={() => void history.refresh()} style={styles.retry}>
-        <Text style={styles.retryText}>TRY AGAIN</Text>
+        <Text style={[styles.retryText, { color: colors.primary }]}>TRY AGAIN</Text>
       </Pressable>
     </View>
   ) : (
@@ -103,7 +118,7 @@ export function HistoryScreen() {
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <StreetBackground />
       <SectionList
         sections={searching ? [] : history.sections}
@@ -117,17 +132,17 @@ export function HistoryScreen() {
               setSearchOpen(!searchOpen);
             }} onFilter={() => { Keyboard.dismiss(); setFilterOpen(true); }} />
             {searchOpen && (
-              <View style={styles.search}>
-                <TextInput accessibilityLabel="Search by category or note" autoFocus autoCapitalize="none" onChangeText={setSearch} onSubmitEditing={Keyboard.dismiss} placeholder="Search gastos, bossing…" placeholderTextColor={streetColors.muted} returnKeyType="search" style={styles.input} value={search} />
+              <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <TextInput accessibilityLabel="Search by category or note" autoFocus autoCapitalize="none" onChangeText={setSearch} onSubmitEditing={Keyboard.dismiss} placeholder="Search gastos, bossing…" placeholderTextColor={colors.textMuted} returnKeyType="search" style={[styles.input, { color: colors.text }]} value={search} />
                 {search !== '' && (
                   <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={clearSearch} style={styles.clear}>
-                    <Text style={styles.retryText}>CLEAR</Text>
+                    <Text style={[styles.retryText, { color: colors.primary }]}>CLEAR</Text>
                   </Pressable>
                 )}
               </View>
             )}
             {filterActive && (
-              <Text style={styles.filterLabel}>
+              <Text style={[styles.filterLabel, { color: colors.primary }]}>
                 {periods.find(([period]) => period === filter.period)?.[1]}
                 {filter.period === 'custom' ? ` · ${filter.fromKey} – ${filter.toKey}` : ''}
                 {filter.categoryId !== undefined ? ` · ${appliedCategoryName ?? 'Category filter on'}` : ''}
@@ -168,14 +183,14 @@ export function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: streetColors.background },
+  screen: { flex: 1 },
   content: { flexGrow: 1, width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.xl },
-  search: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, backgroundColor: streetColors.surface, borderColor: streetColors.border, borderWidth: 1, borderRadius: radii.md },
-  input: { ...typography.body, flex: 1, minHeight: 48, paddingHorizontal: spacing.md, color: streetColors.cream },
+  search: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, borderWidth: 1, borderRadius: radii.md },
+  input: { ...typography.body, flex: 1, minHeight: 48, paddingHorizontal: spacing.md },
   clear: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
-  filterLabel: { ...typography.caption, color: streetColors.lime, marginBottom: spacing.sm },
-  error: { ...typography.body, color: streetColors.orange, textAlign: 'center' },
+  filterLabel: { ...typography.caption, marginBottom: spacing.sm },
+  error: { ...typography.body, textAlign: 'center' },
   retry: { minHeight: layout.minimumTapTarget, justifyContent: 'center', paddingHorizontal: spacing.xl },
-  retryText: { ...typography.label, color: streetColors.lime },
+  retryText: typography.label,
 });

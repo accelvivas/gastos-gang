@@ -1,12 +1,10 @@
-import { Link, type Href } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 
 import { NumberPad } from '@/components/NumberPad';
 import { StreetBackground } from '@/components/StreetBackground';
 import { AmountDisplay } from '@/features/entry/components/AmountDisplay';
 import { CategoryGrid } from '@/features/entry/components/CategoryGrid';
-import { EntryFooter } from '@/features/entry/components/EntryFooter';
 import { GastosHeader } from '@/features/entry/components/GastosHeader';
 import { NoteInput } from '@/features/entry/components/NoteInput';
 import { SectionHeading } from '@/features/entry/components/SectionHeading';
@@ -15,10 +13,8 @@ import { useActiveCategories } from '@/features/entry/hooks/useActiveCategories'
 import { useExpenseEntry } from '@/features/entry/hooks/useExpenseEntry';
 import { useTodayTotal } from '@/features/entry/hooks/useTodayTotal';
 import { notifyExpenseChange } from '@/lib/expenseChanges';
-import { layout, spacing, typography } from '@/theme/tokens';
+import { layout, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
-
-const DEV_DATABASE_ROUTE = '/dev-db' as Href;
 
 export function EntryScreen() {
   const { colors } = useAppTheme();
@@ -42,6 +38,8 @@ export function EntryScreen() {
             <TodayDamageCard
               dayKey={today.dayKey}
               totalCentavos={today.totalCentavos}
+              budgetLimitCentavos={today.budgetEnabled ? today.budgetLimitCentavos : null}
+              budgetProgress={today.budgetProgress}
               unavailable={Boolean(today.error)}
             />
             <View style={styles.section}>
@@ -66,14 +64,6 @@ export function EntryScreen() {
                 onSelect={(category) => void entry.saveForCategory(category)}
               />
             </View>
-            <EntryFooter />
-            {__DEV__ ? (
-              <Link href={DEV_DATABASE_ROUTE} asChild>
-                <Pressable accessibilityRole="link" style={styles.devLink}>
-                  <Text style={[styles.devText, { color: colors.textMuted }]}>Database tools</Text>
-                </Pressable>
-              </Link>
-            ) : null}
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -88,6 +78,4 @@ const styles = StyleSheet.create({
   content: { width: '100%', maxWidth: layout.contentMaxWidth, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.xl },
   section: { gap: spacing.md },
   categorySection: { gap: spacing.md },
-  devLink: { minHeight: layout.minimumTapTarget, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: spacing.md },
-  devText: typography.caption,
 });

@@ -7,6 +7,7 @@ import * as summaryData from '@/features/summary/summaryData';
 import { notifyExpenseChange } from '@/lib/expenseChanges';
 import { listActive } from '@/repositories/categoriesRepo';
 import { create, remove, restore, update } from '@/repositories/expensesRepo';
+import * as expensesRepo from '@/repositories/expensesRepo';
 
 import { createTestDb, type TestDb } from '../helpers/testDb';
 
@@ -125,6 +126,13 @@ test('refreshes automatically when a future-dated expense becomes eligible', asy
   const evening = new Date(2026, 10, 18, 21).getTime();
   const now = jest.spyOn(Date, 'now');
   now.mockReturnValue(noon);
+  const lookup = expensesRepo.getNextFutureExpenseTimestamp;
+  const readDelay = 1200;
+  jest.spyOn(expensesRepo, 'getNextFutureExpenseTimestamp').mockImplementationOnce(async (...args) => {
+    const result = await lookup(...args);
+    now.mockReturnValue(noon + readDelay);
+    return result;
+  });
   const [food] = await listActive(mockDb);
   await create(mockDb, { amountCentavos: 500, categoryId: food!.id, createdAt: evening });
 
@@ -133,7 +141,7 @@ test('refreshes automatically when a future-dated expense becomes eligible', asy
 
   await act(async () => {
     now.mockReturnValue(evening);
-    jest.advanceTimersByTime(evening - noon);
+    jest.advanceTimersByTime(evening - noon - readDelay);
   });
 
   expect((await screen.findAllByText('₱5.00')).length).toBeGreaterThan(0);

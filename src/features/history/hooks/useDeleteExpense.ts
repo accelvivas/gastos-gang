@@ -25,7 +25,7 @@ type DeleteUndoTarget = {
 
 type UseDeleteExpenseOptions = {
   now?: () => number;
-  onChanged: () => void | Promise<void>;
+  onChanged?: () => void | Promise<void>;
 };
 
 export function useDeleteExpense({ now = Date.now, onChanged }: UseDeleteExpenseOptions) {
@@ -91,7 +91,7 @@ export function useDeleteExpense({ now = Date.now, onChanged }: UseDeleteExpense
           });
         }
         try {
-          await onChanged();
+          await onChanged?.();
         } catch {
           // The mutation succeeded; focus refresh will reconcile a transient read failure.
         }
@@ -154,7 +154,7 @@ export function useDeleteExpense({ now = Date.now, onChanged }: UseDeleteExpense
           },
         });
         try {
-          await onChanged();
+          await onChanged?.();
         } catch {
           // The deletion succeeded; do not misreport it because a follow-up read failed.
         }

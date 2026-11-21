@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryChip } from '@/components/CategoryChip';
@@ -14,7 +15,7 @@ type CategoryGridProps = {
   onSelect: (category: Category) => void;
 };
 
-export function CategoryGrid(props: CategoryGridProps) {
+export const CategoryGrid = memo(function CategoryGrid(props: CategoryGridProps) {
   const { colors } = useAppTheme();
   if (props.isLoading) return <ActivityIndicator accessibilityLabel="Loading categories" color={colors.primary} />;
   if (props.error) {
@@ -36,7 +37,7 @@ export function CategoryGrid(props: CategoryGridProps) {
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.sm },

@@ -7,8 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Category } from '@/db/types';
 import { defaultHistoryFilter, periods, type HistoryFilter } from '@/features/history/utils/historyFilters';
 import { dayKeyToLocalDate, toLocalDayKey } from '@/lib/dates';
+import { subscribeToCategoryChanges } from '@/lib/expenseChanges';
 import { listForHistory } from '@/repositories/categoriesRepo';
-import { radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { radii, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 export function HistoryFilterSheet({ initial, onApply, onClose }: {
   initial: HistoryFilter;
@@ -16,6 +18,7 @@ export function HistoryFilterSheet({ initial, onApply, onClose }: {
   onClose: () => void;
 }) {
   const db = useSQLiteContext();
+  const { colors, isDark } = useAppTheme();
   const [draft, setDraft] = useState(initial);
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -30,14 +33,19 @@ export function HistoryFilterSheet({ initial, onApply, onClose }: {
     return () => { active = false; };
   }, [attempt, db]);
 
+  useEffect(() => subscribeToCategoryChanges(() => setAttempt((value) => value + 1)), []);
+
   const invalid = draft.period === 'custom' && draft.fromKey > draft.toKey;
   return (
     <Modal transparent onRequestClose={onClose}>
-      <SafeAreaView style={styles.overlay}>
-        <View accessibilityViewIsModal style={styles.sheet}>
-          <Text accessibilityRole="header" style={styles.title}>FILTER GASTOS</Text>
+      <SafeAreaView testID="history-filter-overlay" style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <View
+          testID="history-filter-sheet"
+          accessibilityViewIsModal
+          style={[styles.sheet, { backgroundColor: colors.surface }]}>
+          <Text accessibilityRole="header" style={[styles.title, { color: colors.primary }]}>FILTER GASTOS</Text>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            <Text style={styles.label}>CATEGORY</Text>
+            <Text style={[styles.label, { color: colors.textMuted }]}>CATEGORY</Text>
             <View style={styles.options}>
               <Choice label="All categories" selected={draft.categoryId === undefined} onPress={() => setDraft({ ...draft, categoryId: undefined })} />
               {categories?.map((category) => (
@@ -46,8 +54,8 @@ export function HistoryFilterSheet({ initial, onApply, onClose }: {
             </View>
             {failed ? (
               <Choice label="Retry loading categories" onPress={() => { setFailed(false); setAttempt(attempt + 1); }} />
-            ) : categories === null ? <Text style={styles.label}>Loading categories…</Text> : null}
-            <Text style={styles.label}>DATE RANGE</Text>
+            ) : categories === null ?             <Text style={[styles.label, { color: colors.textMuted }]}>Loading categories…</Text> : null}
+            <Text style={[styles.label, { color: colors.textMuted }]}>DATE RANGE</Text>
             <View style={styles.options}>
               {periods.filter(([period]) => Platform.OS !== 'web' || period !== 'custom').map(([period, label]) => (
                 <Choice key={period} label={label} selected={draft.period === period} onPress={() => { setPicking(null); setDraft({ ...draft, period }); }} />
@@ -66,7 +74,7 @@ export function HistoryFilterSheet({ initial, onApply, onClose }: {
                       mode="date"
                       value={dayKeyToLocalDate(draft[picking])}
                       presentation={Platform.OS === 'android' ? 'dialog' : 'inline'}
-                      themeVariant="dark"
+                      themeVariant={isDark ? 'dark' : 'light'}
                       onDismiss={() => setPicking(null)}
                       onValueChange={(_, date) => {
                         setDraft((current) => ({ ...current, [picking]: toLocalDayKey(date.getTime()) }));
@@ -76,7 +84,7 @@ export function HistoryFilterSheet({ initial, onApply, onClose }: {
                     {Platform.OS === 'ios' && <Choice label="Done choosing date" onPress={() => setPicking(null)} />}
                   </>
                 )}
-                {invalid && <Text accessibilityLiveRegion="polite" style={styles.error}>Start date must come before or be the same as the end date.</Text>}
+                {invalid && <Text accessibilityLiveRegion="polite" style={[styles.error, { color: colors.warning }]}>Start date must come before or be the same as the end date.</Text>}
               </>
             )}
           </ScrollView>
@@ -96,24 +104,33 @@ export function HistoryFilterSheet({ initial, onApply, onClose }: {
 function Choice({ label, selected, primary, disabled, onPress }: {
   label: string; selected?: boolean; primary?: boolean; disabled?: boolean; onPress: () => void;
 }) {
+  const { colors } = useAppTheme();
   return (
-    <Pressable accessibilityRole={selected === undefined ? 'button' : 'radio'} accessibilityState={{ checked: selected, disabled }} disabled={disabled} onPress={onPress} style={[styles.choice, (primary || selected) && styles.active, disabled && styles.disabled]}>
-      <Text style={[styles.choiceText, (primary || selected) && styles.activeText]}>{label}</Text>
+    <Pressable
+      accessibilityRole={selected === undefined ? 'button' : 'radio'}
+      accessibilityState={{ checked: selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={[
+        styles.choice,
+        { borderColor: colors.border },
+        (primary || selected) && { backgroundColor: colors.primary, borderColor: colors.primary },
+        disabled && styles.disabled,
+      ]}>
+      <Text style={[styles.choiceText, { color: colors.text }, (primary || selected) && { color: colors.primaryText }]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: streetColors.overlay },
-  sheet: { width: '100%', maxWidth: 540, alignSelf: 'center', maxHeight: '90%', padding: spacing.lg, gap: spacing.md, backgroundColor: streetColors.surface, borderRadius: radii.lg },
-  title: { ...typography.heading, color: streetColors.lime },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { width: '100%', maxWidth: 540, alignSelf: 'center', maxHeight: '90%', padding: spacing.lg, gap: spacing.md, borderRadius: radii.lg },
+  title: typography.heading,
   content: { gap: spacing.sm, paddingBottom: spacing.sm },
-  label: { ...typography.label, color: streetColors.muted },
+  label: typography.label,
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  choice: { minHeight: 44, minWidth: 44, justifyContent: 'center', borderWidth: 1, borderColor: streetColors.border, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  choiceText: { ...typography.label, color: streetColors.cream },
-  active: { backgroundColor: streetColors.lime, borderColor: streetColors.lime },
-  activeText: { color: streetColors.black },
+  choice: { minHeight: 44, minWidth: 44, justifyContent: 'center', borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  choiceText: typography.label,
   disabled: { opacity: 0.4 },
-  error: { ...typography.caption, color: streetColors.orange },
+  error: typography.caption,
 });

@@ -5,6 +5,8 @@ import { HistoryHeader } from '@/features/history/components/HistoryHeader';
 import { HistoryEmptyState } from '@/features/history/components/HistoryEmptyState';
 import { HistoryFilterSheet } from '@/features/history/components/HistoryFilterSheet';
 import { historyRange } from '@/features/history/utils/historyFilters';
+import { useSettingsStore } from '@/store/settings-store';
+import { themes } from '@/theme/tokens';
 
 jest.mock('expo-router', () => ({ router: { navigate: jest.fn() } }));
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => undefined }));
@@ -12,6 +14,10 @@ jest.mock('@expo/ui/community/datetime-picker', () => ({ DateTimePicker: () => n
 jest.mock('@/repositories/categoriesRepo', () => ({
   listForHistory: jest.fn().mockResolvedValue([{ id: 4, name: 'Coffee', isArchived: true }]),
 }));
+
+afterEach(() => {
+  useSettingsStore.setState({ themePreference: 'dark' });
+});
 
 test('shows the official logo and wordmark and exposes both History controls', async () => {
   const onSearch = jest.fn();
@@ -60,4 +66,22 @@ test('resets the filter draft and applies the cleared values', async () => {
   expect(onApply).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByRole('button', { name: 'Apply' }));
   expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ period: 'all' }), undefined);
+});
+
+test('renders filter modal surfaces using the selected Light palette', async () => {
+  useSettingsStore.setState({ themePreference: 'light' });
+  await render(
+    <HistoryFilterSheet
+      initial={{ period: 'all', fromKey: '', toKey: '' }}
+      onApply={jest.fn()}
+      onClose={jest.fn()}
+    />
+  );
+
+  expect(screen.getByTestId('history-filter-overlay')).toHaveStyle({
+    backgroundColor: themes.light.overlay,
+  });
+  expect(screen.getByTestId('history-filter-sheet')).toHaveStyle({
+    backgroundColor: themes.light.surface,
+  });
 });

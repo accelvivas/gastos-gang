@@ -3,6 +3,7 @@ import { useEffect as mockUseEffect } from 'react';
 
 import type { ExpenseWithCategory } from '@/db/types';
 import { useExpenseHistory } from '@/features/history/hooks/useExpenseHistory';
+import { notifyExpenseChange } from '@/lib/expenseChanges';
 import * as expensesRepo from '@/repositories/expensesRepo';
 
 const mockDb = {};
@@ -70,5 +71,58 @@ describe('useExpenseHistory', () => {
     expect(result.current.expenses.map((expense) => expense.id)).toHaveLength(33);
     expect(new Set(result.current.expenses.map((expense) => expense.id)).size).toBe(33);
     expect(result.current.hasMore).toBe(false);
+  });
+
+  test('invalidates in-flight pagination when replacement data triggers a refresh', async () => {
+    const firstPage = Array.from({ length: 30 }, (_, index) => row(100 - index, 1_000 - index));
+    let resolveNext: ((rows: ExpenseWithCategory[]) => void) | undefined;
+    jest.mocked(expensesRepo.listPage)
+      .mockResolvedValueOnce(firstPage)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveNext = resolve; }))
+      .mockResolvedValueOnce([row(500, 500)]);
+    const { result } = await renderHook(() => useExpenseHistory(() => 10_000));
+    await waitFor(() => expect(result.current.expenses).toHaveLength(30));
+
+    let loadMore: Promise<void> | undefined;
+    await act(() => {
+      loadMore = result.current.loadMore();
+    });
+    expect(result.current.isLoadingMore).toBe(true);
+
+    await act(async () => {
+      notifyExpenseChange();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.expenses.map((expense) => expense.id)).toEqual([500]));
+    expect(result.current.isLoadingMore).toBe(false);
+
+    await act(async () => {
+      resolveNext?.([row(70, 970)]);
+      await loadMore;
+    });
+    expect(result.current.expenses.map((expense) => expense.id)).toEqual([500]);
+  });
+
+  test('an obsolete page cannot unlock pagination while the new page is pending', async () => {
+    const original = Array.from({ length: 30 }, (_, index) => row(100 - index, 1000 - index));
+    const refreshed = Array.from({ length: 30 }, (_, index) => row(200 - index, 2000 - index));
+    let finishOld: (rows: ExpenseWithCategory[]) => void = () => undefined;
+    let finishCurrent: (rows: ExpenseWithCategory[]) => void = () => undefined;
+    jest.mocked(expensesRepo.listPage)
+      .mockResolvedValueOnce(original)
+      .mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; }))
+      .mockResolvedValueOnce(refreshed)
+      .mockImplementationOnce(() => new Promise((resolve) => { finishCurrent = resolve; }));
+    const { result } = await renderHook(() => useExpenseHistory());
+    await waitFor(() => expect(result.current.expenses[0]?.id).toBe(100));
+    await act(() => { void result.current.loadMore(); });
+    await act(() => result.current.refresh());
+    await act(() => { void result.current.loadMore(); });
+    await act(() => finishOld([]));
+    expect(result.current.isLoadingMore).toBe(true);
+    await act(() => { void result.current.loadMore(); });
+    expect(expensesRepo.listPage).toHaveBeenCalledTimes(4);
+    await act(() => finishCurrent([row(170, 1970)]));
+    expect(result.current.expenses.at(-1)?.id).toBe(170);
   });
 });

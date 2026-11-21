@@ -4,6 +4,40 @@ import { mapCategoryRow, type Category, type CategoryRow } from '@/db/types';
 
 const COLOR_PATTERN = /^#[0-9A-F]{6}$/i;
 
+export const CATEGORY_ICONS = [
+  'fast-food-outline',
+  'bus-outline',
+  'phone-portrait-outline',
+  'bag-handle-outline',
+  'receipt-outline',
+  'ellipsis-horizontal-circle-outline',
+  'restaurant-outline',
+  'cart-outline',
+  'cafe-outline',
+  'game-controller-outline',
+  'home-outline',
+  'heart-outline',
+  'fitness-outline',
+  'medical-outline',
+  'school-outline',
+  'airplane-outline',
+  'gift-outline',
+  'paw-outline',
+  'shirt-outline',
+  'build-outline',
+] as const;
+
+export const CATEGORY_COLORS = [
+  '#F59E0B',
+  '#3B82F6',
+  '#8B5CF6',
+  '#EC4899',
+  '#10B981',
+  '#6B7280',
+  '#FF805C',
+  '#C9FC39',
+] as const;
+
 export type CreateCategoryInput = {
   name: string;
   icon: string;
@@ -28,16 +62,17 @@ function normalizeName(name: string): string {
 
 function normalizeIcon(icon: string): string {
   const normalized = icon.trim();
-  if (!normalized || normalized.length > 60) {
-    throw new AppError('VALIDATION', 'Category icon must be between 1 and 60 characters.');
+  if (!(CATEGORY_ICONS as readonly string[]).includes(normalized)) {
+    throw new AppError('VALIDATION', 'Choose one of the supported category icons.');
   }
   return normalized;
 }
 
 function normalizeColor(color: string): string {
   const normalized = color.trim().toUpperCase();
-  if (!COLOR_PATTERN.test(normalized)) {
-    throw new AppError('VALIDATION', 'Category color must be a six-digit hex color.');
+  if (!COLOR_PATTERN.test(normalized) ||
+    !(CATEGORY_COLORS as readonly string[]).includes(normalized)) {
+    throw new AppError('VALIDATION', 'Choose one of the supported category colors.');
   }
   return normalized;
 }
@@ -159,6 +194,15 @@ export async function update(
       const name = patch.name === undefined ? existing.name : normalizeName(patch.name);
       const icon = patch.icon === undefined ? existing.icon : normalizeIcon(patch.icon);
       const color = patch.color === undefined ? existing.color : normalizeColor(patch.color);
+      if (name !== existing.name) {
+        const duplicate = await txn.getFirstAsync<{ id: number }>(
+          'SELECT id FROM categories WHERE name = ? COLLATE NOCASE AND is_archived = 0 AND id != ?',
+          [name, id]
+        );
+        if (duplicate) {
+          throw new AppError('CONSTRAINT', 'An active category with this name already exists.');
+        }
+      }
       await txn.runAsync('UPDATE categories SET name = ?, icon = ?, color = ? WHERE id = ?', [
         name,
         icon,
@@ -259,6 +303,17 @@ export async function unarchive(db: DbLike, id: number): Promise<Category> {
       if (!existing.isArchived) {
         unarchived = existing;
         return;
+      }
+
+      const duplicate = await txn.getFirstAsync<{ id: number }>(
+        'SELECT id FROM categories WHERE name = ? COLLATE NOCASE AND is_archived = 0',
+        [existing.name]
+      );
+      if (duplicate) {
+        throw new AppError(
+          'CONSTRAINT',
+          'An active category with this name already exists.'
+        );
       }
 
       const orderRow = await txn.getFirstAsync<{ next_order: number }>(

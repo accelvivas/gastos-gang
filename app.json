@@ -11,6 +11,8 @@
       "icon": "./assets/images/gastos-gang-icon.png"
     },
     "android": {
+      "package": "com.accelvivas.gastosgang",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#111714",
         "foregroundImage": "./assets/images/gastos-gang-adaptive.png"

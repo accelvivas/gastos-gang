@@ -4,18 +4,19 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
 function TabIcon({ focused, name }: { focused: boolean; name: TabIconName }) {
+  const { colors } = useAppTheme();
   return (
-    <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+    <View style={[styles.iconContainer, focused && { backgroundColor: colors.primary }]}>
       <Ionicons
         name={name}
         size={focused ? 25 : 24}
-        color={focused ? streetColors.background : streetColors.muted}
+        color={focused ? colors.primaryText : colors.textMuted}
       />
     </View>
   );
@@ -39,6 +40,7 @@ export default function TabsLayout() {
           borderTopWidth: 1.5,
           height: layout.tabBarHeight + insets.bottom,
           paddingTop: spacing.xs,
+          paddingBottom: insets.bottom + spacing.sm,
         },
         tabBarItemStyle: { minHeight: layout.minimumTapTarget },
         tabBarIconStyle: styles.iconSlot,
@@ -55,7 +57,6 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   shell: { flex: 1 },
-  iconSlot: { height: 42, marginBottom: 8 },
+  iconSlot: { height: 42, marginBottom: spacing.xs },
   iconContainer: { width: 52, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radii.lg },
-  iconContainerActive: { backgroundColor: streetColors.lime },
 });

@@ -25,6 +25,10 @@ describe('toCentavos', () => {
   test('rejects numbers that are not representable to two decimals', () => {
     expect(toCentavos(1.005)).toBeNull();
   });
+
+  test('rejects tiny positive amounts that round to zero centavos', () => {
+    expect(toCentavos(Number.MIN_VALUE)).toBeNull();
+  });
 });
 
 describe('formatPeso', () => {

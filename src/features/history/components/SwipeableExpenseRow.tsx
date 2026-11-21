@@ -8,7 +8,8 @@ import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reani
 
 import type { ExpenseWithCategory } from '@/db/types';
 import { ExpenseRow } from '@/features/history/components/ExpenseRow';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 type SwipeableExpenseRowProps = {
   expense: ExpenseWithCategory;
@@ -28,6 +29,7 @@ function DeleteAction({
   progress: SharedValue<number>;
   revealed: boolean;
 }) {
+  const { colors } = useAppTheme();
   const animatedStyle = useAnimatedStyle(() => ({ opacity: Math.min(progress.value, 1) }));
   return (
     <Animated.View accessibilityElementsHidden={!revealed} importantForAccessibility={revealed ? 'auto' : 'no-hide-descendants'} style={[styles.actionContainer, animatedStyle]}>
@@ -35,9 +37,9 @@ function DeleteAction({
         accessibilityLabel={`Delete ${expense.categoryName} expense`}
         accessibilityRole="button"
         onPress={() => onDelete(expense)}
-        style={styles.deleteButton}>
-        <Ionicons name="trash-outline" size={19} color={streetColors.black} />
-        <Text style={styles.deleteText}>DELETE</Text>
+        style={[styles.deleteButton, { backgroundColor: colors.orange }]}>
+        <Ionicons name="trash-outline" size={19} color={colors.primaryText} />
+        <Text style={[styles.deleteText, { color: colors.primaryText }]}>DELETE</Text>
       </Pressable>
     </Animated.View>
   );
@@ -88,7 +90,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderTopRightRadius: radii.lg,
     borderBottomRightRadius: radii.lg,
-    backgroundColor: streetColors.orange,
   },
-  deleteText: { ...typography.label, color: streetColors.black, fontSize: 12 },
+  deleteText: { ...typography.label, fontSize: 12 },
 });

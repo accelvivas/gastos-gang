@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { StreetStarburst } from '@/components/StreetStarburst';
-import { spacing, streetColors, typography } from '@/theme/tokens';
+import { spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 type SectionHeadingProps = {
   accent: 'bullet' | 'star';
@@ -10,13 +11,14 @@ type SectionHeadingProps = {
 };
 
 export function SectionHeading({ accent, subtitle, title }: SectionHeadingProps) {
+  const { colors } = useAppTheme();
   return (
     <View style={styles.row}>
       <View style={styles.titleGroup}>
-        {accent === 'bullet' ? <View style={styles.bullet} /> : <StreetStarburst color={streetColors.orange} size={22} />}
-        <Text style={styles.title}>{title}</Text>
+        {accent === 'bullet' ? <View style={[styles.bullet, { backgroundColor: colors.orange }]} /> : <StreetStarburst color={colors.orange} size={22} />}
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       </View>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>
     </View>
   );
 }
@@ -24,7 +26,7 @@ export function SectionHeading({ accent, subtitle, title }: SectionHeadingProps)
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   titleGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  bullet: { width: 12, height: 12, borderRadius: 7, backgroundColor: streetColors.orange },
-  title: { ...typography.heading, color: streetColors.cream, letterSpacing: 0.8 },
-  subtitle: { ...typography.body, color: streetColors.muted, fontSize: 15 },
+  bullet: { width: 12, height: 12, borderRadius: 7 },
+  title: { ...typography.heading, letterSpacing: 0.8 },
+  subtitle: { ...typography.body, fontSize: 15 },
 });

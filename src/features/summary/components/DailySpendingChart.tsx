@@ -1,22 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 
 import { dayKeyToLocalDate } from '@/lib/dates';
 import { formatPeso } from '@/lib/money';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 import type { SpendingSummary } from '../summaryData';
 import type { SummaryPeriod } from '../summaryPeriods';
 import { summaryDate } from './SummaryOverview';
-import { summaryStyles } from './summaryStyles';
+import { useSummaryStyles } from './summaryStyles';
 
 export const DailySpendingChart = memo(function DailySpendingChart({ days, biggestDay, period }: {
   days: SpendingSummary['days'];
   biggestDay: SpendingSummary['biggestDay'];
   period: SummaryPeriod;
 }) {
+  const { colors } = useAppTheme();
+  const summaryStyles = useSummaryStyles();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
   const selectedIndex = days.findIndex((day) => day.day === selectedKey);
@@ -27,7 +30,7 @@ export const DailySpendingChart = memo(function DailySpendingChart({ days, bigge
   const plotWidth = chartWidth - axisWidth - 8;
   const slot = days.length > 7 ? 34 : Math.max(26, Math.min(52, Math.floor(plotWidth / days.length)));
   const barWidth = Math.min(slot - 8, 24);
-  const chartData = days.map((row, i) => {
+  const chartDays = useMemo(() => days.map((row, i) => {
     const date = dayKeyToLocalDate(row.day);
     const label = period === 'week'
       ? date.toLocaleDateString('en-PH', { weekday: 'short' })
@@ -35,10 +38,13 @@ export const DailySpendingChart = memo(function DailySpendingChart({ days, bigge
     return {
       value: row.totalCentavos,
       label,
-      frontColor: row.day === biggestDay?.day ? streetColors.orange : i === index ? streetColors.lime : streetColors.olive,
       onPress: () => setSelectedKey(row.day),
     };
-  });
+  }), [days, period]);
+  const chartData = chartDays.map((bar, i) => ({
+    ...bar,
+    frontColor: days[i]?.day === biggestDay?.day ? colors.orange : i === index ? colors.primary : colors.olive,
+  }));
   const stepValue = Math.ceil(max / 3);
   const axisLabels = [0, 1, 2, 3].map((step) => formatPeso(Math.min(stepValue * step, Number.MAX_SAFE_INTEGER), { hideZeroDecimals: true }));
 
@@ -55,8 +61,9 @@ export const DailySpendingChart = memo(function DailySpendingChart({ days, bigge
                 <BarChart data={chartData} height={126} width={plotWidth} yAxisLabelWidth={axisWidth}
                   barWidth={barWidth} spacing={slot - barWidth} initialSpacing={4} endSpacing={4}
                   noOfSections={3} maxValue={stepValue * 3} stepValue={stepValue} yAxisLabelTexts={axisLabels}
-                  xAxisColor={streetColors.border} yAxisColor={streetColors.border} rulesColor={streetColors.border}
-                  xAxisLabelTextStyle={styles.axis} yAxisTextStyle={styles.axis} xAxisLabelsHeight={24}
+                  xAxisColor={colors.border} yAxisColor={colors.border} rulesColor={colors.border}
+                  xAxisLabelTextStyle={[styles.axis, { color: colors.textMuted }]}
+                  yAxisTextStyle={[styles.axis, { color: colors.textMuted }]} xAxisLabelsHeight={24}
                   roundedTop isAnimated={false} animationDuration={0} allowFontScaling={false}
                   showScrollIndicator={days.length * slot > plotWidth}
                   disableScroll={days.length * slot <= plotWidth}
@@ -64,11 +71,11 @@ export const DailySpendingChart = memo(function DailySpendingChart({ days, bigge
               )}
             </View>
             {selected && (
-              <View style={styles.dayControls}>
+              <View style={[styles.dayControls, { borderTopColor: colors.border }]}>
                 <DayButton direction="previous" disabled={index === 0} onPress={() => setSelectedKey(days[index - 1]?.day ?? null)} />
                 <View style={styles.dayDetail} accessibilityLiveRegion="polite">
-                  <Text style={styles.date}>{summaryDate(selected.day, true)}</Text>
-                  <Text style={styles.money}>{formatPeso(selected.totalCentavos)}</Text>
+                  <Text style={[styles.date, { color: colors.text }]}>{summaryDate(selected.day, true)}</Text>
+                  <Text style={[styles.money, { color: colors.primary }]}>{formatPeso(selected.totalCentavos)}</Text>
                   <Text style={summaryStyles.muted}>{selected.count} {selected.count === 1 ? 'expense' : 'expenses'}</Text>
                 </View>
                 <DayButton direction="next" disabled={index === days.length - 1} onPress={() => setSelectedKey(days[index + 1]?.day ?? null)} />
@@ -82,21 +89,22 @@ export const DailySpendingChart = memo(function DailySpendingChart({ days, bigge
 });
 
 function DayButton({ direction, disabled, onPress }: { direction: 'previous' | 'next'; disabled: boolean; onPress: () => void }) {
+  const { colors } = useAppTheme();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={direction === 'previous' ? 'Previous spending day' : 'Next spending day'}
       accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
-      style={[styles.button, disabled && styles.disabled]}>
-      <Ionicons name={direction === 'previous' ? 'chevron-back' : 'chevron-forward'} size={20} color={streetColors.lime} />
+      style={[styles.button, { backgroundColor: colors.surfaceElevated }, disabled && styles.disabled]}>
+      <Ionicons name={direction === 'previous' ? 'chevron-back' : 'chevron-forward'} size={20} color={colors.primary} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  axis: { color: streetColors.muted, fontSize: 10 },
-  dayControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: streetColors.border, paddingTop: spacing.sm },
+  axis: { fontSize: 10 },
+  dayControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1, paddingTop: spacing.sm },
   dayDetail: { flex: 1, alignItems: 'center', gap: spacing.xs },
-  date: { ...typography.caption, color: streetColors.cream, textAlign: 'center' },
-  money: { ...typography.label, color: streetColors.lime, textAlign: 'center' },
-  button: { width: layout.minimumTapTarget, height: layout.minimumTapTarget, alignItems: 'center', justifyContent: 'center', backgroundColor: streetColors.surfaceElevated, borderRadius: radii.md },
+  date: { ...typography.caption, textAlign: 'center' },
+  money: { ...typography.label, textAlign: 'center' },
+  button: { width: layout.minimumTapTarget, height: layout.minimumTapTarget, alignItems: 'center', justifyContent: 'center', borderRadius: radii.md },
   disabled: { opacity: 0.4 },
 });

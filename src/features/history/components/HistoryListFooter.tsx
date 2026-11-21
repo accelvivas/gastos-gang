@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { layout, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 type HistoryListFooterProps = {
   hasMore: boolean;
@@ -10,24 +11,25 @@ type HistoryListFooterProps = {
 };
 
 export function HistoryListFooter(props: HistoryListFooterProps) {
+  const { colors } = useAppTheme();
   if (props.isLoadingMore) {
-    return <ActivityIndicator accessibilityLabel="Loading more expenses" color={streetColors.lime} style={styles.footer} />;
+    return <ActivityIndicator accessibilityLabel="Loading more expenses" color={colors.primary} style={styles.footer} />;
   }
   if (props.paginationError) {
     return (
       <View style={styles.footer}>
-        <Text style={styles.error}>{props.paginationError}</Text>
+        <Text style={[styles.error, { color: colors.warning }]}>{props.paginationError}</Text>
         <Pressable accessibilityRole="button" onPress={props.onRetry} style={styles.retry}>
-          <Text style={styles.retryText}>TRY AGAIN</Text>
+          <Text style={[styles.retryText, { color: colors.primary }]}>TRY AGAIN</Text>
         </Pressable>
       </View>
     );
   }
   if (!props.hasMore) return (
     <View style={styles.end}>
-      <View style={styles.rule} />
-      <Text style={styles.done}>Yun na lahat, bossing!</Text>
-      <View style={styles.rule} />
+      <View style={[styles.rule, { backgroundColor: colors.border }]} />
+      <Text style={[styles.done, { color: colors.textMuted }]}>Yun na lahat, bossing!</Text>
+      <View style={[styles.rule, { backgroundColor: colors.border }]} />
     </View>
   );
   return null;
@@ -35,10 +37,10 @@ export function HistoryListFooter(props: HistoryListFooterProps) {
 
 const styles = StyleSheet.create({
   footer: { minHeight: 64, alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginVertical: spacing.lg },
-  error: { ...typography.caption, color: streetColors.orange },
+  error: typography.caption,
   retry: { minHeight: layout.minimumTapTarget, justifyContent: 'center', paddingHorizontal: spacing.lg },
-  retryText: { ...typography.label, color: streetColors.lime },
+  retryText: typography.label,
   end: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
-  rule: { flexShrink: 1, width: 48, height: 1, backgroundColor: streetColors.border },
-  done: { ...typography.caption, flexShrink: 1, color: streetColors.muted, textAlign: 'center' },
+  rule: { flexShrink: 1, width: 48, height: 1 },
+  done: { ...typography.caption, flexShrink: 1, textAlign: 'center' },
 });

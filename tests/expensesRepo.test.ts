@@ -156,6 +156,37 @@ describe('expenses repository', () => {
     expect(ids).toEqual([...ids].sort((left, right) => right - left));
   });
 
+  test.each([0, 1, 50, 100, 500, 1_000, 10_000])(
+    'pages through %i expenses in stable order',
+    async (count) => {
+      const timestamp = new Date(2026, 10, 20, 12).getTime();
+      await db.runAsync(
+        `WITH RECURSIVE sequence(id) AS (
+           SELECT 1 WHERE ? > 0
+           UNION ALL SELECT id + 1 FROM sequence WHERE id < ?
+         )
+         INSERT INTO expenses (id, amount_centavos, category_id, created_at, local_day, updated_at)
+         SELECT id, 101, ?, ? + (id / 75), '2026-11-20', ? FROM sequence`,
+        [count, count, categories[0]!.id, timestamp, timestamp]
+      );
+
+      const expected = Array.from({ length: count }, (_, index) => count - index);
+      const actual: number[] = [];
+      const limit = 50;
+      let cursor: { id: number; createdAt: number } | undefined;
+      for (let pageIndex = 0; pageIndex <= Math.ceil(count / limit); pageIndex += 1) {
+        const page = await expensesRepo.listPage(db, { limit, cursor });
+        actual.push(...page.map(({ id }) => id));
+        const last = page.at(-1);
+        if (!last) break;
+        cursor = { id: last.id, createdAt: last.createdAt };
+      }
+
+      expect(actual).toEqual(expected);
+      expect(await expensesRepo.listPage(db, { limit, cursor })).toEqual([]);
+    }
+  );
+
   test('range and grouped summaries match hand-computed totals', async () => {
     const food = categories[0];
     const transport = categories[1];
@@ -169,6 +200,7 @@ describe('expenses repository', () => {
       categoryId: food!.id,
       createdAt: dayOne,
     });
+
     await expensesRepo.create(db, {
       amountCentavos: 5_000,
       categoryId: food!.id,
@@ -189,6 +221,30 @@ describe('expenses repository', () => {
       { day: '2026-11-20', totalCentavos: 7_000, count: 1 },
       { day: '2026-11-21', totalCentavos: 6_300, count: 2 },
     ]);
+  });
+
+  test('today totals exclude future timestamps until their eligibility cutoff', async () => {
+    const category = categories[0]!;
+    const noon = new Date(2026, 10, 21, 12).getTime();
+    const day = toLocalDayKey(noon);
+    await expensesRepo.create(db, {
+      amountCentavos: 700,
+      categoryId: category.id,
+      createdAt: noon - 1,
+    });
+    const future = await expensesRepo.create(db, {
+      amountCentavos: 900,
+      categoryId: category.id,
+      createdAt: noon + 1,
+    });
+
+    expect(await expensesRepo.totalForDayAt(db, day, noon)).toBe(700);
+    expect(await expensesRepo.getNextFutureExpenseTimestamp(
+      db,
+      { fromKey: day, toKey: day },
+      noon
+    )).toBe(future.createdAt);
+    expect(await expensesRepo.totalForDayAt(db, day, future.createdAt)).toBe(1_600);
   });
 
   test('joined history retains archived category visuals', async () => {

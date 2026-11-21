@@ -36,7 +36,7 @@ function numberToCentavos(input: number): number | null {
   if (Math.abs(scaled - rounded) > tolerance) {
     return null;
   }
-  if (!Number.isSafeInteger(rounded) || rounded > MAX_AMOUNT_CENTAVOS) {
+  if (!Number.isSafeInteger(rounded) || rounded < 1 || rounded > MAX_AMOUNT_CENTAVOS) {
     return null;
   }
 

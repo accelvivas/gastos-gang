@@ -10,7 +10,7 @@ import {
   centavosToAmountDraft,
   type NumberPadKey,
 } from '@/features/entry/utils/amountInput';
-import { notifyExpenseChange } from '@/lib/expenseChanges';
+import { notifyExpenseChange, subscribeToCategoryChanges } from '@/lib/expenseChanges';
 import * as categoriesRepo from '@/repositories/categoriesRepo';
 import * as expensesRepo from '@/repositories/expensesRepo';
 
@@ -123,6 +123,15 @@ export function useExpenseEditor(id: number | null) {
     const timer = setTimeout(() => void load(), 0);
     return () => clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => subscribeToCategoryChanges(() => {
+    void categoriesRepo.listAll(db).then((allCategories) => {
+      if (!mountedRef.current) return;
+      setCategories(allCategories.filter(
+        (category) => !category.isArchived || category.id === categoryId
+      ));
+    });
+  }), [categoryId, db]);
 
   const amountCentavos = amountDraftToCentavos(amountDraft);
   const normalizedNote = note.trim() || null;

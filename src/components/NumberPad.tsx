@@ -10,7 +10,7 @@ import Animated, {
 
 import type { NumberPadKey } from '@/features/entry/utils/amountInput';
 import { tapHaptic } from '@/lib/haptics';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 const ROWS: readonly (readonly NumberPadKey[])[] = [
@@ -56,19 +56,19 @@ const NumberPadButton = memo(function NumberPadButton({ disabled, onKeyPress, pa
           styles.key,
           {
             backgroundColor: isDecimal
-              ? streetColors.olive
+              ? colors.olive
               : isBackspace
-                ? streetColors.brown
-                : streetColors.surfaceElevated,
+                ? colors.brown
+                : colors.surfaceElevated,
             borderColor: colors.border,
           },
           pressed && styles.pressed,
           disabled && styles.disabled,
         ]}>
         {isBackspace ? (
-          <Ionicons name="backspace-outline" color={streetColors.peach} size={30} />
+          <Ionicons name="backspace-outline" color={colors.peach} size={30} />
         ) : (
-          <Text style={[styles.keyText, { color: isDecimal ? streetColors.lime : colors.text }]}> 
+          <Text style={[styles.keyText, { color: isDecimal ? colors.primary : colors.text }]}>
             {padKey}
           </Text>
         )}

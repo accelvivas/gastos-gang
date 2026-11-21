@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 type ExpenseToastProps = {
   accentColor?: string;
@@ -13,7 +14,7 @@ type ExpenseToastProps = {
 };
 
 export function ExpenseToast({
-  accentColor = streetColors.lime,
+  accentColor,
   joke: funnyMessage,
   kind = 'success',
   title,
@@ -21,20 +22,25 @@ export function ExpenseToast({
   onUndo,
   undoAccessibilityLabel = 'Undo saved expense',
 }: ExpenseToastProps) {
+  const { colors } = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
   const indicator = kind === 'success' ? '✓' : kind === 'error' ? '!' : '↶';
   return (
     <View
+      testID="expense-toast"
       accessibilityLiveRegion="polite"
-      style={[styles.toast, { width: Math.min(screenWidth - spacing.xxl, layout.contentMaxWidth) }]}>
-      <View style={[styles.accent, { backgroundColor: accentColor }]} />
+      style={[
+        styles.toast,
+        { width: Math.min(screenWidth - spacing.xxl, layout.contentMaxWidth), backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.black },
+      ]}>
+      <View style={[styles.accent, { backgroundColor: accentColor ?? colors.primary }]} />
       <View style={styles.copy}>
-        <Text style={[styles.title, kind === 'error' && styles.errorTitle]}>
+        <Text style={[styles.title, { color: colors.text }, kind === 'error' && { color: colors.warning }]}>
           {indicator} {title}
         </Text>
-        {funnyMessage ? <Text style={styles.joke}>{funnyMessage}</Text> : null}
+        {funnyMessage ? <Text style={[styles.joke, { color: colors.primary }]}>{funnyMessage}</Text> : null}
         <View style={styles.footer}>
-          {message ? <Text style={styles.message}>{message}</Text> : <View style={styles.footerSpacer} />}
+          {message ? <Text style={[styles.message, { color: colors.text }]}>{message}</Text> : <View style={styles.footerSpacer} />}
           {onUndo ? (
             <Pressable
               accessibilityLabel={undoAccessibilityLabel}
@@ -42,7 +48,7 @@ export function ExpenseToast({
               hitSlop={8}
               onPress={onUndo}
               style={styles.undo}>
-              <Text style={styles.undoText}>UNDO</Text>
+              <Text style={[styles.undoText, { color: colors.orange }]}>UNDO</Text>
             </Pressable>
           ) : null}
         </View>
@@ -55,10 +61,7 @@ const styles = StyleSheet.create({
   toast: {
     maxWidth: layout.contentMaxWidth,
     borderWidth: 1,
-    borderColor: streetColors.border,
     borderRadius: radii.lg,
-    backgroundColor: streetColors.surface,
-    shadowColor: streetColors.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.24,
     shadowRadius: 8,
@@ -78,15 +81,12 @@ const styles = StyleSheet.create({
   copy: { gap: spacing.xs, flexShrink: 1 },
   title: {
     ...typography.label,
-    color: streetColors.cream,
     fontSize: 12,
     lineHeight: 16,
     letterSpacing: 0.5,
   },
-  errorTitle: { color: streetColors.orange },
   joke: {
     ...typography.body,
-    color: streetColors.lime,
     fontSize: 16,
     lineHeight: 21,
     fontWeight: '900',
@@ -100,7 +100,6 @@ const styles = StyleSheet.create({
   footerSpacer: { flex: 1 },
   message: {
     ...typography.caption,
-    color: streetColors.cream,
     fontSize: 13,
     lineHeight: 18,
     flex: 1,
@@ -113,5 +112,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
-  undoText: { ...typography.label, color: streetColors.orange },
+  undoText: typography.label,
 });

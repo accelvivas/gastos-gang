@@ -2,24 +2,27 @@ import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { StreetBackground } from '@/components/StreetBackground';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 import { useSpendingSummary } from '../useSpendingSummary';
 import { CategoryBreakdown } from './CategoryBreakdown';
 import { DailySpendingChart } from './DailySpendingChart';
 import { PeriodToggle, SpendingInsights, SummaryHeader, TotalSpendingCard } from './SummaryOverview';
-import { summaryStyles } from './summaryStyles';
+import { useSummaryStyles } from './summaryStyles';
 
 export function SummaryScreen() {
+  const { colors } = useAppTheme();
+  const summaryStyles = useSummaryStyles();
   const { period, setPeriod, refresh, data, status } = useSpendingSummary();
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <StreetBackground />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={(
           <RefreshControl refreshing={status === 'loading' && data !== null} onRefresh={() => void refresh()}
-            tintColor={streetColors.lime} colors={[streetColors.lime]} progressBackgroundColor={streetColors.surface} />
+            tintColor={colors.primary} colors={[colors.primary]} progressBackgroundColor={colors.surface} />
         )}>
         <SummaryHeader />
         <PeriodToggle period={period} onChange={setPeriod} />
@@ -44,7 +47,7 @@ export function SummaryScreen() {
           </>
         ) : (
           <View style={[summaryStyles.card, styles.loading]}>
-            <ActivityIndicator color={streetColors.lime} />
+            <ActivityIndicator color={colors.primary} />
             <Text accessibilityLiveRegion="polite" style={summaryStyles.muted}>Loading spending summary…</Text>
           </View>
         )}
@@ -54,17 +57,18 @@ export function SummaryScreen() {
 }
 
 function Action({ label, onPress }: { label: string; onPress: () => void }) {
+  const { colors } = useAppTheme();
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.action}>
-      <Text style={styles.actionText}>{label}</Text>
+    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.action, { backgroundColor: colors.primary }]}>
+      <Text style={[styles.actionText, { color: colors.primaryText }]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: streetColors.background },
+  screen: { flex: 1 },
   content: { width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center', padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   loading: { flexDirection: 'row', alignItems: 'center' },
-  action: { minHeight: layout.minimumTapTarget, justifyContent: 'center', alignSelf: 'flex-start', backgroundColor: streetColors.lime, borderRadius: radii.md, paddingHorizontal: spacing.lg },
-  actionText: { ...typography.label, color: streetColors.black, textTransform: 'uppercase' },
+  action: { minHeight: layout.minimumTapTarget, justifyContent: 'center', alignSelf: 'flex-start', borderRadius: radii.md, paddingHorizontal: spacing.lg },
+  actionText: { ...typography.label, textTransform: 'uppercase' },
 });

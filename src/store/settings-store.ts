@@ -8,6 +8,6 @@ type SettingsState = {
 };
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  themePreference: 'system',
+  themePreference: 'dark',
   setThemePreference: (themePreference) => set({ themePreference }),
 }));

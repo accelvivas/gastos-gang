@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Image } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 const officialLogo = require('../../assets/images/gastos-gang-logo.png');
 
@@ -11,12 +11,19 @@ export const BrandLogo = memo(function BrandLogo({
   accessibilityLabel?: string;
 }) {
   return (
-    <Image
-      accessibilityLabel={accessibilityLabel}
-      accessible
-      resizeMode="contain"
-      source={officialLogo}
-      style={{ width: size, height: size }}
-    />
+    <View style={[styles.container, { width: size, height: size }]}>
+      <Image
+        accessibilityLabel={accessibilityLabel}
+        accessible
+        resizeMode="contain"
+        source={officialLogo}
+        style={styles.image}
+      />
+    </View>
   );
+});
+
+const styles = StyleSheet.create({
+  container: { overflow: 'hidden', borderRadius: 10 },
+  image: { width: '100%', height: '100%' },
 });

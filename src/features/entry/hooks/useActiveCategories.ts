@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useRef, useState } from 'react';
 
 import type { Category } from '@/db/types';
+import { subscribeToCategoryChanges } from '@/lib/expenseChanges';
 import * as categoriesRepo from '@/repositories/categoriesRepo';
 
 export function useActiveCategories() {
@@ -31,11 +32,14 @@ export function useActiveCategories() {
     }
   }, [db]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refresh();
-    }, [refresh])
-  );
+  useFocusEffect(useCallback(() => {
+    void refresh();
+    const unsubscribe = subscribeToCategoryChanges(() => void refresh());
+    return () => {
+      requestId.current += 1;
+      unsubscribe();
+    };
+  }, [refresh]));
 
   return { categories, error, isLoading, refresh };
 }

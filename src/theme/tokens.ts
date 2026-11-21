@@ -4,15 +4,29 @@ export type ThemeColors = {
   background: string;
   surface: string;
   surfaceMuted: string;
+  surfaceElevated: string;
   text: string;
   textMuted: string;
   primary: string;
   primaryPressed: string;
+  primaryText: string;
   border: string;
   success: string;
   warning: string;
+  warningBackground: string;
+  warningText: string;
+  warningFill: string;
   danger: string;
+  shadow: string;
+  progressTrack: string;
   overlay: string;
+  cream: string;
+  orange: string;
+  peach: string;
+  olive: string;
+  brown: string;
+  black: string;
+  dot: string;
 };
 
 export const streetColors = {
@@ -42,24 +56,65 @@ export const streetColors = {
   },
 } as const;
 
-const streetTheme: ThemeColors = {
+const darkTheme: ThemeColors = {
   background: streetColors.background,
   surface: streetColors.surface,
   surfaceMuted: streetColors.surfaceElevated,
+  surfaceElevated: streetColors.surfaceElevated,
   text: streetColors.cream,
   textMuted: streetColors.muted,
   primary: streetColors.lime,
   primaryPressed: streetColors.limePressed,
+  primaryText: streetColors.black,
   border: streetColors.border,
   success: streetColors.lime,
   warning: streetColors.orange,
+  warningBackground: '#E8C547',
+  warningText: '#3A2D00',
+  warningFill: '#6A5300',
   danger: streetColors.danger,
+  shadow: '#080C09',
+  progressTrack: 'rgba(17, 23, 20, 0.22)',
   overlay: streetColors.overlay,
+  cream: streetColors.cream,
+  orange: streetColors.orange,
+  peach: streetColors.peach,
+  olive: streetColors.olive,
+  brown: streetColors.brown,
+  black: streetColors.black,
+  dot: streetColors.dot,
 };
 
 export const themes: Record<'light' | 'dark', ThemeColors> = {
-  light: streetTheme,
-  dark: streetTheme,
+  light: {
+    background: '#FBF6EA',
+    surface: '#FFFDF7',
+    surfaceMuted: '#F0E7D5',
+    surfaceElevated: '#F0E7D5',
+    text: '#1B2A20',
+    textMuted: '#536557',
+    primary: '#4B6800',
+    primaryPressed: '#395000',
+    primaryText: '#FFFDF7',
+    border: '#718273',
+    success: '#3E641D',
+    warning: '#A94326',
+    warningBackground: '#F3D978',
+    warningText: '#3A2D00',
+    warningFill: '#735415',
+    danger: '#A42E2E',
+    shadow: '#D5CBB8',
+    progressTrack: 'rgba(27, 42, 32, 0.16)',
+    overlay: 'rgba(17, 23, 20, 0.58)',
+    cream: '#FFFDF7',
+    orange: '#A94326',
+    peach: '#F3A58A',
+    olive: '#3F6241',
+    brown: '#74504A',
+    black: '#1B2A20',
+    dot: '#E8DDC8',
+  },
+  dark: darkTheme,
 };
 
 export const spacing = {

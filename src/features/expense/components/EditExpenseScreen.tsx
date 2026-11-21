@@ -21,7 +21,8 @@ import { StreetBackground } from '@/components/StreetBackground';
 import { AmountDisplay } from '@/features/entry/components/AmountDisplay';
 import { EditCategoryGrid } from '@/features/expense/components/EditCategoryGrid';
 import { useExpenseEditor } from '@/features/expense/hooks/useExpenseEditor';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
+import { useAppTheme } from '@/theme/use-app-theme';
 
 type PickerMode = 'date' | 'time' | null;
 
@@ -45,6 +46,7 @@ export function formatEditTime(ms: number): string {
 }
 
 export function EditExpenseScreen() {
+  const { colors, isDark } = useAppTheme();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const editor = useExpenseEditor(parseExpenseId(params.id));
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
@@ -78,11 +80,11 @@ export function EditExpenseScreen() {
   if (editor.status !== 'ready') {
     const isLoading = editor.status === 'loading';
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
         <StreetBackground />
         <View style={styles.state}>
-          {isLoading ? <ActivityIndicator accessibilityLabel="Loading expense" color={streetColors.lime} /> : null}
-          <Text accessibilityLiveRegion="polite" style={styles.stateText}>
+          {isLoading ? <ActivityIndicator accessibilityLabel="Loading expense" color={colors.primary} /> : null}
+          <Text accessibilityLiveRegion="polite" style={[styles.stateText, { color: colors.textMuted }]}>
             {isLoading
               ? 'Kinukuha ang gastos, bossingâ€¦'
               : editor.status === 'not-found'
@@ -91,12 +93,12 @@ export function EditExpenseScreen() {
           </Text>
           {editor.status === 'error' ? (
             <Pressable accessibilityRole="button" onPress={() => void editor.load()} style={styles.retryButton}>
-              <Text style={styles.retryText}>TRY AGAIN</Text>
+              <Text style={[styles.retryText, { color: colors.primary }]}>TRY AGAIN</Text>
             </Pressable>
           ) : null}
           {!isLoading ? (
             <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.cancelStateButton}>
-              <Text style={styles.cancelText}>GO BACK</Text>
+              <Text style={[styles.cancelText, { color: colors.textMuted }]}>GO BACK</Text>
             </Pressable>
           ) : null}
         </View>
@@ -105,36 +107,36 @@ export function EditExpenseScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: colors.background }]}>
       <StreetBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.topBar}>
             <View>
-              <Text style={styles.eyebrow}>GASTOS GANG.</Text>
-              <Text style={styles.title}>EDIT GASTOS</Text>
-              <Text style={styles.subtitle}>May correction, bossing?</Text>
+              <Text style={[styles.eyebrow, { color: colors.primary }]}>GASTOS GANG.</Text>
+              <Text style={[styles.title, { color: colors.text }]}>EDIT GASTOS</Text>
+              <Text style={[styles.subtitle, { color: colors.textMuted }]}>May correction, bossing?</Text>
             </View>
-            <Pressable accessibilityLabel="Close edit expense" accessibilityRole="button" onPress={() => router.back()} style={styles.closeButton}>
-              <Ionicons color={streetColors.cream} name="close" size={28} />
+            <Pressable accessibilityLabel="Close edit expense" accessibilityRole="button" onPress={() => router.back()} style={[styles.closeButton, { backgroundColor: colors.surface }]}>
+              <Ionicons color={colors.text} name="close" size={28} />
             </Pressable>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>AMOUNT</Text>
+            <Text style={[styles.label, { color: colors.primary }]}>AMOUNT</Text>
             <AmountDisplay draft={editor.amountDraft} error={editor.validationError} />
             <NumberPad disabled={editor.isSaving} onKeyPress={editor.pressAmountKey} />
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>CATEGORY</Text>
+            <Text style={[styles.label, { color: colors.primary }]}>CATEGORY</Text>
             <EditCategoryGrid categories={editor.categories} disabled={editor.isSaving} onSelect={editor.setCategoryId} selectedId={editor.categoryId} />
           </View>
 
           <View style={styles.section}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>NOTE</Text>
-              <Text style={styles.counter}>{editor.note.length}/200</Text>
+              <Text style={[styles.label, { color: colors.primary }]}>NOTE</Text>
+              <Text style={[styles.counter, { color: colors.textMuted }]}>{editor.note.length}/200</Text>
             </View>
             <TextInput
               accessibilityLabel="Expense note"
@@ -143,27 +145,27 @@ export function EditExpenseScreen() {
               multiline
               onChangeText={editor.setNote}
               placeholder="Ano 'to, boss? (optional)"
-              placeholderTextColor={streetColors.muted}
-              style={styles.noteInput}
+              placeholderTextColor={colors.textMuted}
+              style={[styles.noteInput, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }]}
               value={editor.note}
             />
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>WHEN</Text>
+            <Text style={[styles.label, { color: colors.primary }]}>WHEN</Text>
             <View style={styles.whenRow}>
-              <Pressable accessibilityLabel={`Date ${formatEditDate(editor.createdAt)}`} accessibilityRole="button" onPress={() => setPickerMode('date')} style={styles.whenButton}>
-                <Ionicons color={streetColors.orange} name="calendar-outline" size={20} />
-                <Text style={styles.whenText}>{formatEditDate(editor.createdAt)}</Text>
+              <Pressable accessibilityLabel={`Date ${formatEditDate(editor.createdAt)}`} accessibilityRole="button" onPress={() => setPickerMode('date')} style={[styles.whenButton, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <Ionicons color={colors.orange} name="calendar-outline" size={20} />
+                <Text style={[styles.whenText, { color: colors.text }]}>{formatEditDate(editor.createdAt)}</Text>
               </Pressable>
-              <Pressable accessibilityLabel={`Time ${formatEditTime(editor.createdAt)}`} accessibilityRole="button" onPress={() => setPickerMode('time')} style={styles.whenButton}>
-                <Ionicons color={streetColors.orange} name="time-outline" size={20} />
-                <Text style={styles.whenText}>{formatEditTime(editor.createdAt)}</Text>
+              <Pressable accessibilityLabel={`Time ${formatEditTime(editor.createdAt)}`} accessibilityRole="button" onPress={() => setPickerMode('time')} style={[styles.whenButton, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <Ionicons color={colors.orange} name="time-outline" size={20} />
+                <Text style={[styles.whenText, { color: colors.text }]}>{formatEditTime(editor.createdAt)}</Text>
               </Pressable>
             </View>
             {pickerMode ? (
               <CommunityDateTimePicker
-                accentColor={streetColors.lime}
+                accentColor={colors.primary}
                 mode={pickerMode}
                 onDismiss={() => setPickerMode(null)}
                 onValueChange={(_event, selected) => {
@@ -172,22 +174,22 @@ export function EditExpenseScreen() {
                   setPickerMode(null);
                 }}
                 presentation={Platform.OS === 'android' ? 'dialog' : 'inline'}
-                themeVariant="dark"
+                themeVariant={isDark ? 'dark' : 'light'}
                 value={new Date(editor.createdAt)}
               />
             ) : null}
           </View>
 
-          {editor.validationError ? <Text accessibilityLiveRegion="assertive" style={styles.formError}>{editor.validationError}</Text> : null}
+          {editor.validationError ? <Text accessibilityLiveRegion="assertive" style={[styles.formError, { color: colors.warning }]}>{editor.validationError}</Text> : null}
           <Pressable
             accessibilityRole="button"
             disabled={editor.isSaving || !editor.hasChanges}
             onPress={() => void leaveAfterSave()}
-            style={({ pressed }) => [styles.saveButton, pressed && styles.pressed, (!editor.hasChanges || editor.isSaving) && styles.disabled]}>
-            {editor.isSaving ? <ActivityIndicator color={streetColors.black} /> : <Text style={styles.saveText}>SAVE CHANGES</Text>}
+            style={({ pressed }) => [styles.saveButton, { backgroundColor: colors.primary }, pressed && styles.pressed, (!editor.hasChanges || editor.isSaving) && styles.disabled]}>
+            {editor.isSaving ? <ActivityIndicator color={colors.primaryText} /> : <Text style={[styles.saveText, { color: colors.primaryText }]}>SAVE CHANGES</Text>}
           </Pressable>
           <Pressable accessibilityRole="button" disabled={editor.isSaving} onPress={() => router.back()} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>CANCEL</Text>
+            <Text style={[styles.cancelText, { color: colors.textMuted }]}>CANCEL</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -196,32 +198,32 @@ export function EditExpenseScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: streetColors.background },
+  screen: { flex: 1 },
   flex: { flex: 1 },
   content: { width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center', gap: spacing.xl, padding: spacing.lg, paddingBottom: spacing.xxxl },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  eyebrow: { ...typography.label, color: streetColors.lime, letterSpacing: 1.2 },
-  title: { ...typography.title, color: streetColors.cream, fontSize: 34, lineHeight: 40 },
-  subtitle: { ...typography.body, color: streetColors.muted },
-  closeButton: { width: layout.minimumTapTarget, height: layout.minimumTapTarget, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: streetColors.surface },
+  eyebrow: { ...typography.label, letterSpacing: 1.2 },
+  title: { ...typography.title, fontSize: 34, lineHeight: 40 },
+  subtitle: typography.body,
+  closeButton: { width: layout.minimumTapTarget, height: layout.minimumTapTarget, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
   section: { gap: spacing.sm },
-  label: { ...typography.label, color: streetColors.lime, letterSpacing: 1 },
+  label: { ...typography.label, letterSpacing: 1 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  counter: { ...typography.caption, color: streetColors.muted },
-  noteInput: { minHeight: 92, borderWidth: 1.5, borderColor: streetColors.border, borderRadius: radii.lg, backgroundColor: streetColors.surface, color: streetColors.cream, padding: spacing.md, textAlignVertical: 'top', ...typography.body },
+  counter: typography.caption,
+  noteInput: { minHeight: 92, borderWidth: 1.5, borderRadius: radii.lg, padding: spacing.md, textAlignVertical: 'top', ...typography.body },
   whenRow: { flexDirection: 'row', gap: spacing.sm },
-  whenButton: { flex: 1, minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: streetColors.border, borderRadius: radii.md, backgroundColor: streetColors.surface, paddingHorizontal: spacing.md },
-  whenText: { ...typography.caption, flexShrink: 1, color: streetColors.cream, fontWeight: '700' },
-  formError: { ...typography.caption, color: streetColors.orange, textAlign: 'center', fontWeight: '800' },
-  saveButton: { minHeight: 56, alignItems: 'center', justifyContent: 'center', borderRadius: radii.lg, backgroundColor: streetColors.lime },
-  saveText: { ...typography.heading, color: streetColors.black },
+  whenButton: { flex: 1, minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md },
+  whenText: { ...typography.caption, flexShrink: 1, fontWeight: '700' },
+  formError: { ...typography.caption, textAlign: 'center', fontWeight: '800' },
+  saveButton: { minHeight: 56, alignItems: 'center', justifyContent: 'center', borderRadius: radii.lg },
+  saveText: typography.heading,
   cancelButton: { minHeight: layout.minimumTapTarget, alignItems: 'center', justifyContent: 'center' },
-  cancelText: { ...typography.label, color: streetColors.muted },
+  cancelText: typography.label,
   pressed: { opacity: 0.75 },
   disabled: { opacity: 0.4 },
   state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.xl },
-  stateText: { ...typography.body, color: streetColors.muted, textAlign: 'center' },
+  stateText: { ...typography.body, textAlign: 'center' },
   retryButton: { minHeight: layout.minimumTapTarget, justifyContent: 'center', paddingHorizontal: spacing.xl },
-  retryText: { ...typography.label, color: streetColors.lime },
+  retryText: typography.label,
   cancelStateButton: { minHeight: layout.minimumTapTarget, justifyContent: 'center', paddingHorizontal: spacing.xl },
 });
