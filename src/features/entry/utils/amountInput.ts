@@ -59,6 +59,16 @@ export function amountDraftToCentavos(draft: string): number | null {
   return toCentavos(normalizeAmountDraftForSave(draft));
 }
 
+export function centavosToAmountDraft(centavos: number): string {
+  if (!Number.isSafeInteger(centavos) || centavos < 0) {
+    throw new RangeError('Centavos must be a non-negative safe integer.');
+  }
+
+  const whole = Math.floor(centavos / 100);
+  const fraction = centavos % 100;
+  return fraction === 0 ? String(whole) : `${whole}.${String(fraction).padStart(2, '0')}`;
+}
+
 export function formatAmountDraft(draft: string): string {
   if (draft === INITIAL_AMOUNT_DRAFT) {
     return '₱0';

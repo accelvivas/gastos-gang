@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { todayKey } from '@/lib/dates';
+import { subscribeToExpenseChanges } from '@/lib/expenseChanges';
 import * as expensesRepo from '@/repositories/expensesRepo';
 
 function millisecondsUntilTomorrow(): number {
@@ -38,6 +39,7 @@ export function useTodayTotal() {
   }, [db]);
 
   useFocusEffect(useCallback(() => void refresh(), [refresh]));
+  useEffect(() => subscribeToExpenseChanges(() => void refresh()), [refresh]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {

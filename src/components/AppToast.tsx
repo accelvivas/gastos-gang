@@ -1,26 +1,102 @@
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Toast, { type ToastConfig } from 'react-native-toast-message';
-import { useReducedMotion } from 'react-native-reanimated';
+import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { ExpenseToast } from '@/components/ExpenseToast';
 import { layout, spacing } from '@/theme/tokens';
 
-const toastConfig: ToastConfig = {
-  expenseSaved: ({ text1, text2, props }) => (
-    <ExpenseToast
-      title={text1 ?? 'SOLID, BOSSING!'}
-      message={text2 ?? ''}
-      joke={props.joke}
-      accentColor={props.accentColor}
-      kind={props.kind}
-      onUndo={props.onUndo}
-    />
-  ),
+type SwipeToastProps = React.ComponentProps<typeof ExpenseToast> & {
+  isVisible: boolean;
+  hide: () => void;
+  activeRef: RefObject<object | null>;
 };
+
+function SwipeToast({ isVisible, hide, activeRef, onUndo, ...content }: SwipeToastProps) {
+  const { width } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
+  const offset = useSharedValue(0);
+  const dismissing = useSharedValue(false);
+  // The host supplies a new hide callback whenever it shows a new toast.
+  const token = useMemo(() => ({ hide, isVisible }), [hide, isVisible]);
+
+  useLayoutEffect(() => {
+    if (isVisible) {
+      offset.set(0);
+      dismissing.set(false);
+      activeRef.current = token;
+    }
+    return () => {
+      if (activeRef.current === token) activeRef.current = null;
+      cancelAnimation(offset);
+    };
+  }, [activeRef, dismissing, isVisible, offset, token]);
+
+  const dismiss = useCallback(() => {
+    if (activeRef.current === token) hide();
+  }, [activeRef, hide, token]);
+  const pan = Gesture.Pan()
+    .enabled(isVisible)
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-10, 10])
+    .maxPointers(1)
+    .withTestId('expense-toast-swipe')
+    .onUpdate(({ translationX }) => {
+      if (!dismissing.get()) offset.set(translationX);
+    })
+    // Gesture Handler registers this callback during render and runs it only on release.
+    // eslint-disable-next-line react-hooks/refs
+    .onEnd(({ translationX }, success) => {
+      if (!success || dismissing.get() || Math.abs(translationX) < Math.min(96, width * 0.22)) return;
+      dismissing.set(true);
+      offset.set(withTiming(Math.sign(translationX) * width, { duration: reduceMotion ? 0 : 180 }, (finished) => {
+        if (finished) scheduleOnRN(dismiss);
+      }));
+    })
+    .onFinalize(() => {
+      if (!dismissing.get()) offset.set(withTiming(0, { duration: reduceMotion ? 0 : 160 }));
+    });
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateX: offset.get() }] }));
+
+  return (
+    <GestureDetector gesture={pan} touchAction="pan-y">
+      <Animated.View style={slide} pointerEvents={isVisible ? 'auto' : 'none'}
+        accessibilityElementsHidden={!isVisible} importantForAccessibility={isVisible ? 'auto' : 'no-hide-descendants'}>
+        <ExpenseToast {...content} onUndo={onUndo && (() => {
+          if (activeRef.current === token && !dismissing.get()) onUndo();
+        })} />
+      </Animated.View>
+    </GestureDetector>
+  );
+}
 
 export function AppToast() {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
+  const activeRef = useRef<object | null>(null);
+  const [toastVersion, setToastVersion] = useState(0);
+  // Invalidate before React commits a replacement or a timer-driven hide.
+  const invalidateSwipe = () => { activeRef.current = null; };
+  const toastConfig = useMemo<ToastConfig>(() => ({
+    expenseSaved: ({ text1, text2, props, isVisible, hide }) => (
+      <SwipeToast
+        key={toastVersion}
+        activeRef={activeRef}
+        isVisible={isVisible}
+        hide={hide}
+        title={text1 ?? 'SOLID, BOSSING!'}
+        message={text2 ?? ''}
+        joke={props.joke}
+        accentColor={props.accentColor}
+        kind={props.kind}
+        onUndo={props.onUndo}
+        undoAccessibilityLabel={props.undoAccessibilityLabel}
+      />
+    ),
+  }), [toastVersion]);
   return (
     <Toast
       animationConfig={{
@@ -28,6 +104,12 @@ export function AppToast() {
         exit: { type: 'timing', duration: reduceMotion ? 0 : 180 },
       }}
       config={toastConfig}
+      swipeable={false}
+      onShow={() => {
+        invalidateSwipe();
+        setToastVersion((version) => version + 1);
+      }}
+      onHide={invalidateSwipe}
       position="bottom"
       bottomOffset={layout.tabBarHeight + insets.bottom + spacing.md}
     />

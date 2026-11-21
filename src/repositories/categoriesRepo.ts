@@ -70,6 +70,19 @@ export async function listActive(db: DbLike): Promise<Category[]> {
   }
 }
 
+export async function listForHistory(db: DbLike): Promise<Category[]> {
+  try {
+    const rows = await db.getAllAsync<CategoryRow>(
+      `SELECT c.* FROM categories c
+       WHERE c.is_archived = 0 OR EXISTS (SELECT 1 FROM expenses e WHERE e.category_id = c.id)
+       ORDER BY c.is_archived, c.sort_order, c.id`
+    );
+    return rows.map(mapCategoryRow);
+  } catch (error) {
+    return wrapDatabaseError(error, 'Unable to load history categories.');
+  }
+}
+
 export async function listAll(db: DbLike): Promise<Category[]> {
   try {
     const rows = await db.getAllAsync<CategoryRow>(

@@ -1,5 +1,5 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { SummaryScreen } from '@/features/summary/components/SummaryScreen';
 
 export default function SummaryRoute() {
-  return <ScreenPlaceholder title="Summary" description="Spending insights arrive in Phase 4." />;
+  return <SummaryScreen />;
 }

@@ -14,6 +14,11 @@ import {
 import { getRandomToastMessage } from '@/features/entry/utils/getRandomToastMessage';
 import { successHaptic, warningHaptic } from '@/lib/haptics';
 import { formatPeso } from '@/lib/money';
+import {
+  beginUndoOperation,
+  finishUndoOperation,
+  isUndoOperationActive,
+} from '@/lib/undoCoordinator';
 import * as expensesRepo from '@/repositories/expensesRepo';
 
 const UNDO_WINDOW_MS = 5_000;
@@ -24,7 +29,7 @@ type UseExpenseEntryOptions = {
   undoWindowMs?: number;
 };
 
-type UndoTarget = { id: number; expiresAt: number };
+type UndoTarget = { id: number; expiresAt: number; token: number };
 
 export function useExpenseEntry({
   onExpenseChanged,
@@ -47,6 +52,7 @@ export function useExpenseEntry({
   const undoneCopyIndex = useRef(0);
 
   const expireUndo = useCallback(() => {
+    if (undoTargetRef.current) finishUndoOperation(undoTargetRef.current.token);
     undoTargetRef.current = null;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     undoTimerRef.current = null;
@@ -56,8 +62,11 @@ export function useExpenseEntry({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      const ownsToast = Boolean(
+        undoTargetRef.current && isUndoOperationActive(undoTargetRef.current.token)
+      );
       expireUndo();
-      Toast.hide();
+      if (ownsToast) Toast.hide();
     };
   }, [expireUndo]);
 
@@ -66,7 +75,10 @@ export function useExpenseEntry({
     if (target && expectedExpenseId !== undefined && target.id !== expectedExpenseId) {
       return;
     }
-    if (!target || undoingRef.current || now() >= target.expiresAt) {
+    if (!target || undoingRef.current || !isUndoOperationActive(target.token)) {
+      return;
+    }
+    if (now() >= target.expiresAt) {
       expireUndo();
       Toast.hide();
       return;
@@ -147,7 +159,11 @@ export function useExpenseEntry({
         if (!mountedRef.current) return;
         expireUndo();
         const expiresAt = now() + undoWindowMs;
-        undoTargetRef.current = { id: expense.id, expiresAt };
+        undoTargetRef.current = {
+          id: expense.id,
+          expiresAt,
+          token: beginUndoOperation(),
+        };
         undoTimerRef.current = setTimeout(expireUndo, undoWindowMs);
         setAmountDraft(INITIAL_AMOUNT_DRAFT);
         setNote('');

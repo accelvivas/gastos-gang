@@ -4,32 +4,30 @@
     "slug": "gastos-gang",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/gastos-gang-icon.png",
     "scheme": "gastosgang",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/gastos-gang-icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#111714",
+        "foregroundImage": "./assets/images/gastos-gang-adaptive.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "server",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/gastos-gang-logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#6C4DFF",
-          "image": "./assets/images/splash-icon.png",
+          "backgroundColor": "#111714",
+          "image": "./assets/images/gastos-gang-logo.png",
           "imageWidth": 76
         }
       ],

@@ -45,11 +45,41 @@ export type UpdateExpensePatch = {
 
 export type ExpensePageOptions = {
   limit: number;
+  filters?: ExpenseHistoryFilters;
   cursor?: {
     createdAt: number;
     id: number;
   };
 };
+
+export type ExpenseHistoryFilters = {
+  search?: string;
+  categoryId?: number;
+  dateRange?: { fromKey: string; toKey: string };
+};
+
+function historyPredicates(filters?: ExpenseHistoryFilters) {
+  const clauses: string[] = [];
+  const args: (string | number)[] = [];
+  const search = filters?.search?.trim();
+  if (search) {
+    const pattern = `%${search.replace(/[!%_]/g, '!$&')}%`;
+    clauses.push("(c.name LIKE ? ESCAPE '!' OR e.note LIKE ? ESCAPE '!')");
+    args.push(pattern, pattern);
+  }
+  if (filters?.categoryId !== undefined) {
+    validatePositiveInteger(filters.categoryId, 'Category ID');
+    clauses.push('e.category_id = ?');
+    args.push(filters.categoryId);
+  }
+  if (filters?.dateRange) {
+    const { fromKey, toKey } = filters.dateRange;
+    validateDayRange(fromKey, toKey);
+    clauses.push('e.local_day BETWEEN ? AND ?');
+    args.push(fromKey, toKey);
+  }
+  return { clauses, args };
+}
 
 export type CategorySummary = {
   categoryId: number;
@@ -316,25 +346,18 @@ export async function listPage(
   }
 
   try {
-    const rows = options.cursor
-      ? await db.getAllAsync<ExpenseWithCategoryRow>(
-          `${EXPENSE_WITH_CATEGORY_SELECT}
-           WHERE e.created_at < ? OR (e.created_at = ? AND e.id < ?)
-           ORDER BY e.created_at DESC, e.id DESC
-           LIMIT ?`,
-          [
-            options.cursor.createdAt,
-            options.cursor.createdAt,
-            options.cursor.id,
-            options.limit,
-          ]
-        )
-      : await db.getAllAsync<ExpenseWithCategoryRow>(
-          `${EXPENSE_WITH_CATEGORY_SELECT}
-           ORDER BY e.created_at DESC, e.id DESC
-           LIMIT ?`,
-          [options.limit]
-        );
+    const { clauses, args } = historyPredicates(options.filters);
+    if (options.cursor) {
+      const { createdAt, id } = options.cursor;
+      clauses.push('(e.created_at < ? OR (e.created_at = ? AND e.id < ?))');
+      args.push(createdAt, createdAt, id);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const rows = await db.getAllAsync<ExpenseWithCategoryRow>(
+      `${EXPENSE_WITH_CATEGORY_SELECT} ${where}
+       ORDER BY e.created_at DESC, e.id DESC LIMIT ?`,
+      [...args, options.limit]
+    );
     return rows.map(mapExpenseWithCategoryRow);
   } catch (error) {
     return wrapDatabaseError(error, 'Unable to load expense history.');
@@ -409,21 +432,24 @@ export async function sumByCategory(
 export async function sumByDay(
   db: DbLike,
   fromKey: string,
-  toKey: string
+  toKey: string,
+  filters?: ExpenseHistoryFilters
 ): Promise<DaySummary[]> {
   validateDayRange(fromKey, toKey);
   try {
+    const { clauses, args } = historyPredicates(filters);
+    const extra = clauses.length ? `AND ${clauses.join(' AND ')}` : '';
     const rows = await db.getAllAsync<{
       day: string;
       total_centavos: number;
       count: number;
     }>(
-      `SELECT local_day AS day, SUM(amount_centavos) AS total_centavos, COUNT(*) AS count
-       FROM expenses
-       WHERE local_day BETWEEN ? AND ?
-       GROUP BY local_day
-       ORDER BY local_day ASC`,
-      [fromKey, toKey]
+      `SELECT e.local_day AS day, SUM(e.amount_centavos) AS total_centavos, COUNT(*) AS count
+       FROM expenses e JOIN categories c ON c.id = e.category_id
+       WHERE e.local_day BETWEEN ? AND ? ${extra}
+       GROUP BY e.local_day
+       ORDER BY e.local_day ASC`,
+      [fromKey, toKey, ...args]
     );
     return rows.map((row) => ({
       day: row.day,
@@ -432,6 +458,73 @@ export async function sumByDay(
     }));
   } catch (error) {
     return wrapDatabaseError(error, 'Unable to summarize expenses by day.');
+  }
+}
+
+type SummaryRange = { fromKey: string; toKey: string };
+type SpendingSummaryRow =
+  | { kind: 'total' | 'previous'; totalCentavos: number }
+  | ({ kind: 'category' } & CategorySummary)
+  | ({ kind: 'day' } & DaySummary);
+
+export async function readSpendingSummary(db: DbLike, current: SummaryRange, previous: SummaryRange) {
+  validateDayRange(current.fromKey, current.toKey);
+  validateDayRange(previous.fromKey, previous.toKey);
+  try {
+    // One read statement keeps every aggregate on the same SQLite snapshot.
+    const rows = await db.getAllAsync<SpendingSummaryRow>(
+      `WITH period_rows AS (
+         SELECT amount_centavos, local_day, category_id FROM expenses WHERE local_day BETWEEN ? AND ?
+       )
+       SELECT 'total' AS kind, COALESCE(SUM(amount_centavos), 0) AS totalCentavos,
+              NULL AS count, NULL AS day, NULL AS categoryId, NULL AS name, NULL AS icon, NULL AS color
+       FROM period_rows
+       UNION ALL
+       SELECT 'previous', COALESCE(SUM(amount_centavos), 0), NULL, NULL, NULL, NULL, NULL, NULL
+       FROM expenses WHERE local_day BETWEEN ? AND ?
+       UNION ALL
+       SELECT 'category', SUM(p.amount_centavos), COUNT(*), NULL, c.id, c.name, c.icon, c.color
+       FROM period_rows p JOIN categories c ON c.id = p.category_id
+       GROUP BY c.id, c.name, c.icon, c.color
+       UNION ALL
+       SELECT 'day', SUM(amount_centavos), COUNT(*), local_day, NULL, NULL, NULL, NULL
+       FROM period_rows GROUP BY local_day`,
+      [current.fromKey, current.toKey, previous.fromKey, previous.toKey]
+    );
+    const categories: CategorySummary[] = [];
+    const days: DaySummary[] = [];
+    let totalCentavos: number | undefined;
+    let previousTotalCentavos: number | undefined;
+    for (const row of rows) {
+      const { totalCentavos: amount } = row;
+      if (!Number.isSafeInteger(amount) || amount < 0) {
+        throw new AppError('DB', 'A spending total exceeds the supported precision.');
+      }
+      if ((row.kind === 'day' || row.kind === 'category') &&
+        (!Number.isSafeInteger(row.count) || row.count <= 0)) {
+        throw new AppError('DB', 'An expense count exceeds the supported precision.');
+      }
+      if (row.kind === 'total') totalCentavos = amount;
+      if (row.kind === 'previous') previousTotalCentavos = amount;
+      if (row.kind === 'category') {
+        const { categoryId, name, icon, color, count } = row;
+        categories.push({ categoryId, name, icon, color, count, totalCentavos: amount });
+      }
+      if (row.kind === 'day') days.push({ day: row.day, count: row.count, totalCentavos: amount });
+    }
+    if (
+      totalCentavos === undefined || previousTotalCentavos === undefined ||
+      categories.reduce((sum, row) => sum + row.totalCentavos, 0) !== totalCentavos ||
+      days.reduce((sum, row) => sum + row.totalCentavos, 0) !== totalCentavos
+    ) {
+      throw new AppError('DB', 'Spending totals do not reconcile.');
+    }
+    return {
+      totalCentavos, previousTotalCentavos, days,
+      categories: categories.sort((a, b) => b.totalCentavos - a.totalCentavos || a.categoryId - b.categoryId),
+    };
+  } catch (error) {
+    return wrapDatabaseError(error, 'Unable to load spending summary.');
   }
 }
 

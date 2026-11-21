@@ -1,7 +1,5 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { EditExpenseScreen } from '@/features/expense/components/EditExpenseScreen';
 
 export default function EditExpenseRoute() {
-  return (
-    <ScreenPlaceholder title="Edit expense" description="Expense editing arrives in Phase 3." />
-  );
+  return <EditExpenseScreen />;
 }

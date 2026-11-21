@@ -9,6 +9,7 @@ type ExpenseToastProps = {
   title: string;
   message: string;
   onUndo?: () => void;
+  undoAccessibilityLabel?: string;
 };
 
 export function ExpenseToast({
@@ -18,6 +19,7 @@ export function ExpenseToast({
   title,
   message,
   onUndo,
+  undoAccessibilityLabel = 'Undo saved expense',
 }: ExpenseToastProps) {
   const { width: screenWidth } = useWindowDimensions();
   const indicator = kind === 'success' ? '✓' : kind === 'error' ? '!' : '↶';
@@ -35,7 +37,7 @@ export function ExpenseToast({
           {message ? <Text style={styles.message}>{message}</Text> : <View style={styles.footerSpacer} />}
           {onUndo ? (
             <Pressable
-              accessibilityLabel="Undo saved expense"
+              accessibilityLabel={undoAccessibilityLabel}
               accessibilityRole="button"
               hitSlop={8}
               onPress={onUndo}

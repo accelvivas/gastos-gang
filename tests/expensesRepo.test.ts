@@ -17,6 +17,42 @@ describe('expenses repository', () => {
     db.close();
   });
 
+  test('searches archived category names and literal note text across filtered pages', async () => {
+    const food = categories[0]!;
+    const transport = categories[1]!;
+    const today = new Date(2026, 10, 21, 12).getTime();
+    const yesterday = new Date(2026, 10, 20, 12).getTime();
+    const base = { categoryId: food.id, amountCentavos: 701, createdAt: today };
+    const first = await expensesRepo.create(db, { ...base, note: '50% Lunch' });
+    const latest = await expensesRepo.create(db, { ...base, note: '50% dinner' });
+    await expensesRepo.create(db, { ...base, note: '500 breakfast' });
+    await expensesRepo.create(db, { ...base, note: '50% snack', createdAt: yesterday });
+    await expensesRepo.create(db, { ...base, note: '50% ride', categoryId: transport.id });
+    await categoriesRepo.archive(db, food.id);
+
+    expect(await categoriesRepo.listForHistory(db)).toContainEqual(
+      expect.objectContaining({ id: food.id, isArchived: true })
+    );
+    expect(await expensesRepo.listPage(db, { limit: 10, filters: { search: food.name.toUpperCase() } }))
+      .toHaveLength(4);
+    expect(await expensesRepo.listPage(db, { limit: 10, filters: { search: 'LUNCH' } }))
+      .toEqual([expect.objectContaining({ id: first.id })]);
+    const filters = {
+      search: '50%',
+      categoryId: food.id,
+      dateRange: { fromKey: '2026-11-21', toKey: '2026-11-21' },
+    };
+    const firstPage = await expensesRepo.listPage(db, { limit: 1, filters });
+    expect(firstPage.map((row) => row.id)).toEqual([latest.id]);
+    const nextPage = await expensesRepo.listPage(db, {
+      limit: 1, filters, cursor: { id: latest.id, createdAt: today },
+    });
+    expect(nextPage.map((row) => row.id)).toEqual([first.id]);
+    expect(await expensesRepo.sumByDay(db, '2026-11-21', '2026-11-21', filters)).toEqual([
+      { day: '2026-11-21', totalCentavos: 1402, count: 2 },
+    ]);
+  });
+
   test('create, update, remove, and restore preserve the expected data', async () => {
     const food = categories[0];
     const transport = categories[1];
@@ -153,5 +189,48 @@ describe('expenses repository', () => {
       { day: '2026-11-20', totalCentavos: 7_000, count: 1 },
       { day: '2026-11-21', totalCentavos: 6_300, count: 2 },
     ]);
+  });
+
+  test('joined history retains archived category visuals', async () => {
+    const category = categories[0]!;
+    const createdAt = new Date(2026, 10, 21, 10).getTime();
+    await expensesRepo.create(db, {
+      amountCentavos: 2_500,
+      categoryId: category.id,
+      createdAt,
+    });
+    await categoriesRepo.archive(db, category.id);
+
+    expect(await expensesRepo.listByDayRange(db, '2026-11-21', '2026-11-21')).toEqual([
+      expect.objectContaining({
+        categoryId: category.id,
+        categoryName: category.name,
+        categoryIcon: category.icon,
+        categoryColor: category.color,
+        categoryIsArchived: true,
+      }),
+    ]);
+  });
+
+  test('daily SQL totals follow edit, date move, delete, and exact restore', async () => {
+    const category = categories[0]!;
+    const firstDay = new Date(2026, 10, 20, 23, 59).getTime();
+    const secondDay = new Date(2026, 10, 21, 0, 1).getTime();
+    const expense = await expensesRepo.create(db, {
+      amountCentavos: 1_000,
+      categoryId: category.id,
+      createdAt: firstDay,
+    });
+    expect(await expensesRepo.totalForDay(db, '2026-11-20')).toBe(1_000);
+
+    await expensesRepo.update(db, expense.id, { amountCentavos: 2_500, createdAt: secondDay });
+    expect(await expensesRepo.totalForDay(db, '2026-11-20')).toBe(0);
+    expect(await expensesRepo.totalForDay(db, '2026-11-21')).toBe(2_500);
+
+    const deleted = await expensesRepo.remove(db, expense.id);
+    expect(await expensesRepo.totalForDay(db, '2026-11-21')).toBe(0);
+    await expensesRepo.restore(db, deleted);
+    expect(await expensesRepo.totalForDay(db, '2026-11-21')).toBe(2_500);
+    expect(await expensesRepo.getById(db, expense.id)).toEqual(deleted);
   });
 });

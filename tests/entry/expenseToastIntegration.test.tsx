@@ -1,5 +1,8 @@
+import 'react-native-gesture-handler/jestSetup';
+
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Pressable, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 
 import { AppToast } from '@/components/AppToast';
@@ -10,6 +13,10 @@ import * as expensesRepo from '@/repositories/expensesRepo';
 const mockDb = {};
 
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDb }));
+jest.mock('react-native-worklets', () => ({
+  ...jest.requireActual('react-native-worklets'),
+  getUIRuntimeHolder: () => ({}),
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
@@ -77,10 +84,10 @@ describe('expense toast integration', () => {
     const showToast = jest.spyOn(Toast, 'show');
 
     await render(
-      <>
+      <GestureHandlerRootView>
         <ExpenseEntryHarness />
         <AppToast />
-      </>
+      </GestureHandlerRootView>
     );
 
     await fireEvent.press(screen.getByRole('button', { name: 'Enter 1' }));

@@ -1,10 +1,5 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { HistoryScreen } from '@/features/history/components/HistoryScreen';
 
 export default function HistoryRoute() {
-  return (
-    <ScreenPlaceholder
-      title="History"
-      description="Wala pang gastos. Solid! History arrives in Phase 3."
-    />
-  );
+  return <HistoryScreen />;
 }

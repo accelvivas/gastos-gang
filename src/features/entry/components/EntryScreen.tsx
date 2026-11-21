@@ -1,5 +1,4 @@
 import { Link, type Href } from 'expo-router';
-import { useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { TodayDamageCard } from '@/features/entry/components/TodayDamageCard';
 import { useActiveCategories } from '@/features/entry/hooks/useActiveCategories';
 import { useExpenseEntry } from '@/features/entry/hooks/useExpenseEntry';
 import { useTodayTotal } from '@/features/entry/hooks/useTodayTotal';
+import { notifyExpenseChange } from '@/lib/expenseChanges';
 import { layout, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -26,9 +26,7 @@ export function EntryScreen() {
   const reduceMotion = useReducedMotion();
   const categories = useActiveCategories();
   const today = useTodayTotal();
-  const { refresh: refreshTodayTotal } = today;
-  const refreshTotal = useCallback(() => void refreshTodayTotal(), [refreshTodayTotal]);
-  const entry = useExpenseEntry({ onExpenseChanged: refreshTotal });
+  const entry = useExpenseEntry({ onExpenseChanged: notifyExpenseChange });
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>

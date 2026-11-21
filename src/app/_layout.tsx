@@ -39,7 +39,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen
               name="expense/[id]"
-              options={{ presentation: 'modal', title: 'Edit expense' }}
+              options={{ presentation: 'modal', headerShown: false }}
             />
             {__DEV__ ? <Stack.Screen name="dev-db" options={{ title: 'Database check' }} /> : null}
           </Stack>

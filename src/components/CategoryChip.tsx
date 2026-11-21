@@ -1,9 +1,10 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CategoryIcon } from '@/components/CategoryIcon';
 import type { Category } from '@/db/types';
 import { tapHaptic } from '@/lib/haptics';
-import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
+import { layout, radii, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 type CategoryChipProps = {
@@ -11,10 +12,6 @@ type CategoryChipProps = {
   disabled?: boolean;
   onPress: (category: Category) => void;
 };
-
-function categoryMark(name: string): string {
-  return name.trim().toLowerCase() === 'other' ? '•••' : name.trim().charAt(0).toUpperCase();
-}
 
 export const CategoryChip = memo(function CategoryChip({
   category,
@@ -40,9 +37,7 @@ export const CategoryChip = memo(function CategoryChip({
         disabled && styles.disabled,
       ]}>
       <View style={[styles.accent, { backgroundColor: category.color }]} />
-      <View style={[styles.icon, { backgroundColor: category.color }]}> 
-        <Text style={styles.mark}>{categoryMark(category.name)}</Text>
-      </View>
+      <CategoryIcon icon={category.icon} color={category.color} size={40} iconSize={23} />
       <Text numberOfLines={1} style={[styles.label, { color: colors.text }]}>
         {category.name}
       </Text>
@@ -62,15 +57,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: radii.lg,
   },
-  icon: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
   accent: { position: 'absolute', left: -1.5, top: 15, width: 5, height: 43, borderRadius: radii.pill },
-  mark: { ...typography.label, color: streetColors.black, fontSize: 16, letterSpacing: 0.5 },
   label: { ...typography.label, width: '100%', fontSize: 14 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
   disabled: { opacity: 0.45 },
