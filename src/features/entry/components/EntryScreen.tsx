@@ -1,7 +1,6 @@
 import { Link, type Href } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NumberPad } from '@/components/NumberPad';
 import { StreetBackground } from '@/components/StreetBackground';
@@ -29,7 +28,7 @@ export function EntryScreen() {
   const entry = useExpenseEntry({ onExpenseChanged: notifyExpenseChange });
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StreetBackground />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -78,7 +77,7 @@ export function EntryScreen() {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

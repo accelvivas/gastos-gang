@@ -1,6 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useWindowDimensions } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  PanResponder,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type PanResponderGestureState,
+} from 'react-native';
 import Toast, { type ToastConfig } from 'react-native-toast-message';
 import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,38 +43,52 @@ function SwipeToast({ isVisible, hide, activeRef, onUndo, ...content }: SwipeToa
   const dismiss = useCallback(() => {
     if (activeRef.current === token) hide();
   }, [activeRef, hide, token]);
-  const pan = Gesture.Pan()
-    .enabled(isVisible)
-    .activeOffsetX([-12, 12])
-    .failOffsetY([-10, 10])
-    .maxPointers(1)
-    .withTestId('expense-toast-swipe')
-    .onUpdate(({ translationX }) => {
-      if (!dismissing.get()) offset.set(translationX);
-    })
-    // Gesture Handler registers this callback during render and runs it only on release.
-    // eslint-disable-next-line react-hooks/refs
-    .onEnd(({ translationX }, success) => {
-      if (!success || dismissing.get() || Math.abs(translationX) < Math.min(96, width * 0.22)) return;
+  // PanResponder callbacks are registered during render and use the live Reanimated shared values.
+  // eslint-disable-next-line react-hooks/refs
+  const panResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponderCapture: (_event, gestureState: PanResponderGestureState) => (
+      isVisible &&
+      !dismissing.get() &&
+      Math.abs(gestureState.dx) >= 12 &&
+      Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
+    ),
+    onPanResponderMove: (_event, gestureState) => {
+      if (!dismissing.get()) offset.set(gestureState.dx);
+    },
+    onPanResponderRelease: (_event, gestureState) => {
+      if (dismissing.get()) return;
+      if (Math.abs(gestureState.dx) < Math.min(96, width * 0.22)) {
+        offset.set(withTiming(0, { duration: reduceMotion ? 0 : 160 }));
+        return;
+      }
       dismissing.set(true);
-      offset.set(withTiming(Math.sign(translationX) * width, { duration: reduceMotion ? 0 : 180 }, (finished) => {
+      offset.set(withTiming(Math.sign(gestureState.dx) * width, {
+        duration: reduceMotion ? 0 : 180,
+      }, (finished) => {
         if (finished) scheduleOnRN(dismiss);
       }));
-    })
-    .onFinalize(() => {
+    },
+    onPanResponderTerminate: () => {
       if (!dismissing.get()) offset.set(withTiming(0, { duration: reduceMotion ? 0 : 160 }));
-    });
+    },
+  }), [dismiss, dismissing, isVisible, offset, reduceMotion, width]);
   const slide = useAnimatedStyle(() => ({ transform: [{ translateX: offset.get() }] }));
 
   return (
-    <GestureDetector gesture={pan} touchAction="pan-y">
-      <Animated.View style={slide} pointerEvents={isVisible ? 'auto' : 'none'}
-        accessibilityElementsHidden={!isVisible} importantForAccessibility={isVisible ? 'auto' : 'no-hide-descendants'}>
+    <View
+      testID="expense-toast-swipe"
+      collapsable={false}
+      pointerEvents={isVisible ? 'auto' : 'none'}
+      accessibilityElementsHidden={!isVisible}
+      importantForAccessibility={isVisible ? 'auto' : 'no-hide-descendants'}
+      {...panResponder.panHandlers}>
+      <Animated.View style={slide}>
         <ExpenseToast {...content} onUndo={onUndo && (() => {
           if (activeRef.current === token && !dismissing.get()) onUndo();
         })} />
       </Animated.View>
-    </GestureDetector>
+    </View>
   );
 }
 
@@ -98,20 +117,26 @@ export function AppToast() {
     ),
   }), [toastVersion]);
   return (
-    <Toast
-      animationConfig={{
-        enter: { type: 'timing', duration: reduceMotion ? 0 : 220 },
-        exit: { type: 'timing', duration: reduceMotion ? 0 : 180 },
-      }}
-      config={toastConfig}
-      swipeable={false}
-      onShow={() => {
-        invalidateSwipe();
-        setToastVersion((version) => version + 1);
-      }}
-      onHide={invalidateSwipe}
-      position="bottom"
-      bottomOffset={layout.tabBarHeight + insets.bottom + spacing.md}
-    />
+    <View pointerEvents="box-none" style={styles.overlay}>
+      <Toast
+        animationConfig={{
+          enter: { type: 'timing', duration: reduceMotion ? 0 : 220 },
+          exit: { type: 'timing', duration: reduceMotion ? 0 : 180 },
+        }}
+        config={toastConfig}
+        swipeable={false}
+        onShow={() => {
+          invalidateSwipe();
+          setToastVersion((version) => version + 1);
+        }}
+        onHide={invalidateSwipe}
+        position="bottom"
+        bottomOffset={layout.tabBarHeight + insets.bottom + spacing.md}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFill, zIndex: 1 },
+});

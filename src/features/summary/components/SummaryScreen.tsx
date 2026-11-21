@@ -1,6 +1,5 @@
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StreetBackground } from '@/components/StreetBackground';
 import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
@@ -14,7 +13,7 @@ import { summaryStyles } from './summaryStyles';
 export function SummaryScreen() {
   const { period, setPeriod, refresh, data, status } = useSpendingSummary();
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <View style={styles.screen}>
       <StreetBackground />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -50,7 +49,7 @@ export function SummaryScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

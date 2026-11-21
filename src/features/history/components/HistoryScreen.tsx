@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, Pressable, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StreetBackground } from '@/components/StreetBackground';
 import type { ExpenseWithCategory } from '@/db/types';
@@ -104,7 +103,7 @@ export function HistoryScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <View style={styles.screen}>
       <StreetBackground />
       <SectionList
         sections={searching ? [] : history.sections}
@@ -164,7 +163,7 @@ export function HistoryScreen() {
           setFilterOpen(false);
         }} />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BrandLogo } from '@/components/BrandLogo';
-import { StreetStarburst } from '@/components/StreetStarburst';
+import { TabHeading } from '@/components/AppHeader';
 import { dayKeyToLocalDate } from '@/lib/dates';
 import { formatPeso } from '@/lib/money';
 import { layout, radii, spacing, streetColors, typography } from '@/theme/tokens';
@@ -16,21 +15,7 @@ export function summaryDate(key: string, full = false) {
 }
 
 export function SummaryHeader() {
-  return (
-    <View style={summaryStyles.section}>
-      <View style={styles.brand}>
-        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <BrandLogo size={48} />
-        </View>
-        <Text style={styles.wordmark}>GASTOS <Text style={styles.lime}>GANG.</Text></Text>
-        <StreetStarburst size={25} color={streetColors.orange} />
-      </View>
-      <View style={styles.heading}>
-        <Text accessibilityRole="header" style={styles.screenTitle}>SUMMARY</Text>
-        <Text style={summaryStyles.muted}>Saan napunta pera mo, boss?</Text>
-      </View>
-    </View>
-  );
+  return <TabHeading title="SUMMARY" subtitle="Saan napunta pera mo, boss?" />;
 }
 
 export function PeriodToggle({ period, onChange }: { period: SummaryPeriod; onChange: (next: SummaryPeriod) => void }) {
@@ -111,11 +96,6 @@ export function SpendingInsights({ data }: { data: SpendingSummary }) {
 }
 
 const styles = StyleSheet.create({
-  brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  wordmark: { ...typography.heading, flex: 1, color: streetColors.cream, fontWeight: '900' },
-  lime: { color: streetColors.lime },
-  heading: { borderLeftWidth: 6, borderLeftColor: streetColors.lime, paddingLeft: spacing.md },
-  screenTitle: { ...typography.title, color: streetColors.cream, fontSize: 34, lineHeight: 40 },
   toggle: { flexDirection: 'row', gap: spacing.xs, padding: spacing.xs, borderWidth: 1, borderColor: streetColors.border, borderRadius: radii.lg, backgroundColor: streetColors.surface },
   segment: { flex: 1, minHeight: layout.minimumTapTarget, alignItems: 'center', justifyContent: 'center', padding: spacing.xs, borderRadius: radii.md },
   activeSegment: { backgroundColor: streetColors.lime },

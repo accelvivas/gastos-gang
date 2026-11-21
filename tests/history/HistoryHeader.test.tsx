@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { AppHeader } from '@/components/AppHeader';
 import { HistoryHeader } from '@/features/history/components/HistoryHeader';
 import { HistoryEmptyState } from '@/features/history/components/HistoryEmptyState';
 import { HistoryFilterSheet } from '@/features/history/components/HistoryFilterSheet';
@@ -15,8 +16,13 @@ jest.mock('@/repositories/categoriesRepo', () => ({
 test('shows the official logo and wordmark and exposes both History controls', async () => {
   const onSearch = jest.fn();
   const onFilter = jest.fn();
-  await render(<HistoryHeader searchOpen={false} filterActive onSearch={onSearch} onFilter={onFilter} />);
-  expect(screen.getByLabelText('Gastos Gang').props.source).toBeTruthy();
+  await render(
+    <>
+      <AppHeader />
+      <HistoryHeader searchOpen={false} filterActive onSearch={onSearch} onFilter={onFilter} />
+    </>
+  );
+  expect(screen.getByLabelText('Gastos Gang', { includeHiddenElements: true }).props.source).toBeTruthy();
   expect(screen.getByRole('header', { name: 'GASTOS GANG.' }).props.numberOfLines).toBeUndefined();
   expect(screen.getByRole('header', { name: 'HISTORY' })).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Search expenses' }));
