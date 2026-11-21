@@ -15,9 +15,14 @@ export function compareSpending(current: number, previous: number) {
   } as const;
 }
 
-export async function loadSpendingSummary(db: DbLike, period: SummaryPeriod, day: string) {
+export async function loadSpendingSummary(
+  db: DbLike,
+  period: SummaryPeriod,
+  day: string,
+  cutoffMs: number = Date.now()
+) {
   const ranges = summaryRanges(period, day);
-  const data = await readSpendingSummary(db, ranges.current, ranges.previous);
+  const data = await readSpendingSummary(db, ranges.current, ranges.previous, cutoffMs);
   const days = fillMissingDays(data.days, ranges.current.fromKey, ranges.current.toKey);
   const categories = data.categories.filter((row) => row.totalCentavos > 0).map((row) => ({
     ...row,

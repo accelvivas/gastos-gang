@@ -467,21 +467,50 @@ type SpendingSummaryRow =
   | ({ kind: 'category' } & CategorySummary)
   | ({ kind: 'day' } & DaySummary);
 
-export async function readSpendingSummary(db: DbLike, current: SummaryRange, previous: SummaryRange) {
+export async function getNextFutureExpenseTimestamp(
+  db: DbLike,
+  range: SummaryRange,
+  cutoffMs: number
+): Promise<number | null> {
+  validateDayRange(range.fromKey, range.toKey);
+  validateTimestamp(cutoffMs);
+  try {
+    const row = await db.getFirstAsync<{ created_at: number }>(
+      `SELECT MIN(created_at) AS created_at
+       FROM expenses
+       WHERE local_day >= ? AND local_day <= ? AND created_at > ?`,
+      [range.fromKey, range.toKey, cutoffMs]
+    );
+    return row?.created_at ?? null;
+  } catch (error) {
+    return wrapDatabaseError(error, 'Unable to schedule spending summary refresh.');
+  }
+}
+
+export async function readSpendingSummary(
+  db: DbLike,
+  current: SummaryRange,
+  previous: SummaryRange,
+  cutoffMs: number = Date.now()
+) {
   validateDayRange(current.fromKey, current.toKey);
   validateDayRange(previous.fromKey, previous.toKey);
+  validateTimestamp(cutoffMs);
   try {
     // One read statement keeps every aggregate on the same SQLite snapshot.
     const rows = await db.getAllAsync<SpendingSummaryRow>(
       `WITH period_rows AS (
-         SELECT amount_centavos, local_day, category_id FROM expenses WHERE local_day BETWEEN ? AND ?
+         SELECT amount_centavos, local_day, category_id
+         FROM expenses
+         WHERE local_day >= ? AND local_day <= ? AND created_at <= ?
        )
        SELECT 'total' AS kind, COALESCE(SUM(amount_centavos), 0) AS totalCentavos,
               NULL AS count, NULL AS day, NULL AS categoryId, NULL AS name, NULL AS icon, NULL AS color
        FROM period_rows
        UNION ALL
        SELECT 'previous', COALESCE(SUM(amount_centavos), 0), NULL, NULL, NULL, NULL, NULL, NULL
-       FROM expenses WHERE local_day BETWEEN ? AND ?
+       FROM expenses
+       WHERE local_day >= ? AND local_day <= ? AND created_at <= ?
        UNION ALL
        SELECT 'category', SUM(p.amount_centavos), COUNT(*), NULL, c.id, c.name, c.icon, c.color
        FROM period_rows p JOIN categories c ON c.id = p.category_id
@@ -489,7 +518,10 @@ export async function readSpendingSummary(db: DbLike, current: SummaryRange, pre
        UNION ALL
        SELECT 'day', SUM(amount_centavos), COUNT(*), local_day, NULL, NULL, NULL, NULL
        FROM period_rows GROUP BY local_day`,
-      [current.fromKey, current.toKey, previous.fromKey, previous.toKey]
+      [
+        current.fromKey, current.toKey, cutoffMs,
+        previous.fromKey, previous.toKey, cutoffMs,
+      ]
     );
     const categories: CategorySummary[] = [];
     const days: DaySummary[] = [];

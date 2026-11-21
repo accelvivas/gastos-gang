@@ -93,7 +93,9 @@ test('ignores an older query when switching rapidly back to Week', async () => {
   await render(<SummaryScreen />);
   await screen.findByText('Nov 16 – Nov 18');
   await fireEvent.press(screen.getByRole('radio', { name: 'This Month' }));
-  await waitFor(() => expect(loader).toHaveBeenCalledWith(mockDb, 'month', '2026-11-18'));
+  await waitFor(() => expect(loader).toHaveBeenCalledWith(
+    mockDb, 'month', '2026-11-18', expect.any(Number)
+  ));
   expect(screen.queryByText('Nov 16 – Nov 18')).toBeNull();
   await fireEvent.press(screen.getByRole('radio', { name: 'This Week' }));
   await screen.findByText('Nov 16 – Nov 18');
@@ -115,4 +117,25 @@ test('recomputes local dates when the app resumes on the next day', async () => 
   await act(() => appListener('active'));
   await screen.findByText('Nov 16 – Nov 19');
   expect(screen.queryByText('Nov 16 – Nov 18')).toBeNull();
+});
+
+test('refreshes automatically when a future-dated expense becomes eligible', async () => {
+  jest.useFakeTimers();
+  const noon = new Date(2026, 10, 18, 12).getTime();
+  const evening = new Date(2026, 10, 18, 21).getTime();
+  const now = jest.spyOn(Date, 'now');
+  now.mockReturnValue(noon);
+  const [food] = await listActive(mockDb);
+  await create(mockDb, { amountCentavos: 500, categoryId: food!.id, createdAt: evening });
+
+  await render(<SummaryScreen />);
+  await screen.findByText('WALA PANG DAMAGE, BOSS!');
+
+  await act(async () => {
+    now.mockReturnValue(evening);
+    jest.advanceTimersByTime(evening - noon);
+  });
+
+  expect((await screen.findAllByText('₱5.00')).length).toBeGreaterThan(0);
+  jest.useRealTimers();
 });

@@ -2,7 +2,9 @@ import { todayKey } from '@/lib/dates';
 import { compareSpending, loadSpendingSummary } from '@/features/summary/summaryData';
 import { summaryRanges, type SummaryPeriod } from '@/features/summary/summaryPeriods';
 import { archive, listActive } from '@/repositories/categoriesRepo';
-import { create, readSpendingSummary, sumByCategory, sumByDay, totalForRange } from '@/repositories/expensesRepo';
+import {
+  create, listByDayRange, readSpendingSummary, sumByCategory, sumByDay, totalForRange, update,
+} from '@/repositories/expensesRepo';
 
 import { createTestDb } from '../helpers/testDb';
 
@@ -91,6 +93,56 @@ test('rejects an aggregate SQLite cannot represent safely in JavaScript', async 
     );
     const { current, previous } = summaryRanges('week', '2026-11-21');
     await expect(readSpendingSummary(db, current, previous)).rejects.toThrow('supported precision');
+  } finally {
+    db.close();
+  }
+});
+
+test('future timestamps are excluded at every Summary aggregate boundary', async () => {
+  const db = await createTestDb();
+  try {
+    const cutoff = new Date(2026, 10, 21, 12).getTime();
+    jest.spyOn(Date, 'now').mockReturnValue(cutoff);
+    const [food, transport] = await listActive(db);
+
+    await create(db, { amountCentavos: 100, categoryId: food!.id, createdAt: cutoff - 3_600_000 });
+    await create(db, { amountCentavos: 200, categoryId: food!.id, createdAt: cutoff });
+    await create(db, { amountCentavos: 300, categoryId: transport!.id, createdAt: cutoff + 1 });
+    await create(db, { amountCentavos: 400, categoryId: transport!.id, createdAt: new Date(2026, 10, 21, 21).getTime() });
+    await create(db, { amountCentavos: 500, categoryId: transport!.id, createdAt: new Date(2026, 10, 22, 9).getTime() });
+    await create(db, { amountCentavos: 600, categoryId: transport!.id, createdAt: new Date(2026, 10, 10, 12).getTime() });
+
+    const data = await loadSpendingSummary(db, 'week', '2026-11-21', cutoff);
+
+    expect(data.totalCentavos).toBe(300);
+    expect(data.previousTotalCentavos).toBe(600);
+    expect(data.comparison.differenceCentavos).toBe(-300);
+    expect(data.categories.reduce((sum, row) => sum + row.totalCentavos, 0)).toBe(data.totalCentavos);
+    expect(data.days.reduce((sum, row) => sum + row.totalCentavos, 0)).toBe(data.totalCentavos);
+  } finally {
+    jest.restoreAllMocks();
+    db.close();
+  }
+});
+
+test('future expense becomes eligible and Summary updates after editing', async () => {
+  const db = await createTestDb();
+  try {
+    const cutoff = new Date(2026, 10, 21, 12).getTime();
+    const future = new Date(2026, 10, 21, 21).getTime();
+    const [food] = await listActive(db);
+    const expense = await create(db, { amountCentavos: 500, categoryId: food!.id, createdAt: future });
+
+    expect((await loadSpendingSummary(db, 'week', '2026-11-21', cutoff)).totalCentavos).toBe(0);
+    expect((await loadSpendingSummary(db, 'week', '2026-11-21', future)).totalCentavos).toBe(500);
+
+    await update(db, expense.id, { createdAt: future + 1 });
+    expect((await loadSpendingSummary(db, 'week', '2026-11-21', future)).totalCentavos).toBe(0);
+    await update(db, expense.id, { createdAt: cutoff });
+    expect((await loadSpendingSummary(db, 'week', '2026-11-21', future)).totalCentavos).toBe(500);
+
+    const history = await listByDayRange(db, '2026-11-21', '2026-11-21');
+    expect(history).toContainEqual(expect.objectContaining({ id: expense.id }));
   } finally {
     db.close();
   }
