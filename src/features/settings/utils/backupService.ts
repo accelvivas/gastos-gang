@@ -5,13 +5,12 @@ import { Platform } from 'react-native';
 
 import type { CategoryRow, ExpenseRow } from '@/db/types';
 import type { DbLike } from '@/db/client';
-import { clearRecurringBackup, readRecurringBackup, restoreRecurringBackup } from '@/features/recurring/backup';
 import { MAX_AMOUNT_CENTAVOS } from '@/lib/money';
 import * as categoriesRepo from '@/repositories/categoriesRepo';
 import * as expensesRepo from '@/repositories/expensesRepo';
 import {
   BACKUP_FORMAT,
-  backupVersion,
+  BACKUP_SCHEMA_VERSION,
   MAX_BACKUP_CATEGORIES,
   MAX_BACKUP_EXPENSES,
   MAX_BACKUP_FILE_BYTES,
@@ -166,7 +165,7 @@ export async function createBackupSnapshot(
     const data = await readPersistentData(txn, pageSize);
     const candidate: GastosGangBackup = {
       format: BACKUP_FORMAT,
-      schemaVersion: backupVersion(data),
+      schemaVersion: BACKUP_SCHEMA_VERSION,
       createdAt,
       appVersion,
       data,
@@ -226,12 +225,10 @@ async function readPersistentData(
   const legacySettings = await db.getAllAsync<{ key: string; value: string }>(
     'SELECT key, value FROM settings ORDER BY key'
   );
-  const recurring = await readRecurringBackup(db);
   return {
     categories,
     expenses,
     settings: settingRows(legacySettings, appSettings),
-    ...(recurring ? { recurring } : {}),
   };
 }
 
@@ -591,7 +588,7 @@ export async function restoreBackupAtomically(
         const currentData = await readPersistentData(txn);
         const currentSnapshot = validateBackup({
           format: BACKUP_FORMAT,
-          schemaVersion: backupVersion(currentData),
+          schemaVersion: BACKUP_SCHEMA_VERSION,
           createdAt: backup.createdAt,
           appVersion: backup.appVersion,
           data: currentData,
@@ -604,7 +601,6 @@ export async function restoreBackupAtomically(
           );
         }
       }
-      await clearRecurringBackup(txn);
       await txn.runAsync('DELETE FROM expenses');
       await txn.runAsync('DELETE FROM categories');
       await txn.runAsync('DELETE FROM app_settings');
@@ -613,7 +609,6 @@ export async function restoreBackupAtomically(
       await insertTableRows(txn, 'expenses', backup);
       await insertTableRows(txn, 'app_settings', backup);
       await insertTableRows(txn, 'settings', backup);
-      await restoreRecurringBackup(txn, backup.data.recurring);
       await verifyBasicIntegrity(txn, backup);
       await verifyExactRows(txn, backup);
     });

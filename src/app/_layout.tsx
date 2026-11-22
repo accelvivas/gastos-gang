@@ -8,8 +8,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppToast } from '@/components/AppToast';
 import { AnimatedLaunchScreen } from '@/components/startup/AnimatedLaunchScreen';
 import { DatabaseProvider } from '@/db/DatabaseProvider';
-import { RecurringLifecycle } from '@/features/recurring/RecurringLifecycle';
 import { useAppStartup } from '@/hooks/useAppStartup';
+import { clearLegacyRecurringNotifications } from '@/lib/legacyRecurringNotifications';
 import { streetColors } from '@/theme/tokens';
 import { applyNativeThemePreference, useAppTheme } from '@/theme/use-app-theme';
 
@@ -65,6 +65,12 @@ export default function RootLayout() {
     });
   }, [rootBackground, themePreference]);
 
+  useEffect(() => {
+    clearLegacyRecurringNotifications().catch((error) => {
+      console.warn('Could not clear previous recurring payment reminders.', error);
+    });
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: rootBackground }}>
       <DatabaseProvider onError={startup.markError}>
@@ -89,7 +95,6 @@ export default function RootLayout() {
             />
             {__DEV__ ? <Stack.Screen name="dev-db" options={{ title: 'Database check' }} /> : null}
           </Stack>
-          <RecurringLifecycle />
           <StatusBar style={launching || isDark ? 'light' : 'dark'} />
           <AppToast />
           {(startup.phase === 'ready' || startup.phase === 'animating') ? (

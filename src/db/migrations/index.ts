@@ -2,6 +2,7 @@ import { migrate001Init } from '@/db/migrations/001_init';
 import { migrate002ExpenseQueryIndexes } from '@/db/migrations/002_expense_query_indexes';
 import { migrate003AppSettings } from '@/db/migrations/003_app_settings';
 import { migrate004Recurring } from '@/db/migrations/004_recurring';
+import { migrate005RemoveRecurring } from '@/db/migrations/005_remove_recurring';
 
 export type Migration = {
   version: number;
@@ -35,5 +36,11 @@ export const MIGRATIONS: readonly Migration[] = [
     name: 'recurring expenses',
     up: migrate004Recurring,
     userVersionStatement: 'PRAGMA user_version = 4;',
+  },
+  {
+    version: 5,
+    name: 'remove recurring expenses',
+    up: migrate005RemoveRecurring,
+    userVersionStatement: 'PRAGMA user_version = 5;',
   },
 ];

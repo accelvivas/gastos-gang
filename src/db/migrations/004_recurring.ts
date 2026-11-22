@@ -50,9 +50,6 @@ export async function migrate004Recurring(db: DbLike): Promise<void> {
       due_time TEXT NOT NULL,
       offsets INTEGER NOT NULL CHECK (offsets BETWEEN 0 AND 15)
     );
-    CREATE TABLE recurring_device (
-      id INTEGER PRIMARY KEY CHECK (id = 1)
-    );
     CREATE TRIGGER recurring_unlink_deleted_expense AFTER DELETE ON expenses
     BEGIN
       UPDATE recurring_occurrences SET expense_id = NULL WHERE expense_id = OLD.id;

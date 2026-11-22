@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/gastos-gang-icon.png" width="120" alt="Official Gastos Gang logo">
+  <img src="assets/images/gg-shaka-icon.png" width="120" alt="Official Gastos Gang logo">
 </p>
 
 # Gastos Gang
@@ -10,9 +10,9 @@ Gastos Gang is an offline-first personal expense tracker. Log an expense with a 
 
 ## Download for Android
 
-**[Download Gastos Gang v1.0.0 Beta 1 for Android](https://github.com/accelvivas/gastos-gang/releases/download/v1.0.0-beta.1/GastosGang-v1.0.0-beta.1.apk)** · 117 MB · Android 7.0+
+**[Download Gastos Gang v1.0.0 Beta 2 for Android](https://github.com/accelvivas/gastos-gang/releases/download/v1.0.0-beta.2/GastosGang-v1.0.0-beta.2.apk)** · Android 7.0+
 
-This is a beta release. See the [release notes](https://github.com/accelvivas/gastos-gang/releases/tag/v1.0.0-beta.1) for details.
+This is a beta release. See the [release notes](https://github.com/accelvivas/gastos-gang/releases/tag/v1.0.0-beta.2) for details.
 
 1. Download the APK attached to an official Gastos Gang release.
 2. Open the downloaded file. If Android prompts you, allow installation from the trusted app you used to open it.
@@ -73,7 +73,7 @@ npx eas-cli login
 npx eas-cli build --platform android --profile preview
 ```
 
-The Android package is `com.accelvivas.gastosgang`. The app version is `1.0.0`, with Android version code `1`. Increase the version code before each subsequent distributed build and keep the same package ID and signing key so Android can install updates over existing data. Keep signing credentials out of Git and manage them through EAS.
+The Android package is `com.accelvivas.gastosgang`. The app version is `1.0.0`, with Android version code `2`. Increase the version code before each subsequent distributed build and keep the same package ID and signing key so Android can install updates over existing data. Keep signing credentials out of Git and manage them through EAS.
 
 ## Known limitations
 

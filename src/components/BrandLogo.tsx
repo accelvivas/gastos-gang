@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
-const officialLogo = require('../../assets/images/gastos-gang-logo.png');
+const officialLogo = require('../../assets/images/gg-shaka-logo-transparent.png');
 
 export const BrandLogo = memo(function BrandLogo({
   size = 84,

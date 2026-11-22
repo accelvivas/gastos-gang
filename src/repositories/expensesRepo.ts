@@ -24,11 +24,9 @@ const EXPENSE_WITH_CATEGORY_SELECT = `
     c.name AS category_name,
     c.icon AS category_icon,
     c.color AS category_color,
-    c.is_archived AS category_is_archived,
-    o.status AS recurring_source
+    c.is_archived AS category_is_archived
   FROM expenses e
   INNER JOIN categories c ON c.id = e.category_id
-  LEFT JOIN recurring_occurrences o ON o.expense_id = e.id
 `;
 
 export type CreateExpenseInput = {
@@ -266,11 +264,8 @@ export async function remove(db: DbLike, id: number): Promise<Expense> {
       if (!existing) {
         throw new AppError('NOT_FOUND', 'Expense not found.');
       }
-      const recurringOccurrence = await txn.getFirstAsync<{ scheduleId: number; dueDay: string }>(
-        'SELECT schedule_id AS scheduleId, due_day AS dueDay FROM recurring_occurrences WHERE expense_id = ?', [id]
-      );
       await txn.runAsync('DELETE FROM expenses WHERE id = ?', [id]);
-      deletedExpense = recurringOccurrence ? { ...existing, recurringOccurrence } : existing;
+      deletedExpense = existing;
     });
   } catch (error) {
     return wrapDatabaseError(error, 'Unable to delete expense.');
@@ -310,11 +305,6 @@ export async function restore(db: DbLike, expense: Expense): Promise<Expense> {
           expense.updatedAt,
         ]
       );
-      if (expense.recurringOccurrence) {
-        await txn.runAsync(`UPDATE recurring_occurrences SET expense_id = ?
-          WHERE schedule_id = ? AND due_day = ? AND expense_id IS NULL AND status IN ('paid','auto')`,
-          [expense.id, expense.recurringOccurrence.scheduleId, expense.recurringOccurrence.dueDay]);
-      }
       restoredExpense = await findById(txn, expense.id);
     });
   } catch (error) {

@@ -67,7 +67,7 @@ describe('versioned backup validation', () => {
 
   test.each([
     ['unknown format', (value: ReturnType<typeof validBackup>) => { value.format = 'other'; }],
-    ['unsupported schema', (value: ReturnType<typeof validBackup>) => { value.schemaVersion = 2; }],
+    ['unsupported schema', (value: ReturnType<typeof validBackup>) => { value.schemaVersion = 3; }],
     ['duplicate category IDs', (value: ReturnType<typeof validBackup>) => {
       value.data.categories[1]!.id = value.data.categories[0]!.id;
     }],
@@ -99,6 +99,21 @@ describe('versioned backup validation', () => {
     const value = validBackup();
     mutate(value);
     expect(() => validateBackup(value)).toThrow();
+  });
+
+  test('accepts old recurring backups but excludes recurring data when normalizing them', () => {
+    const data = validBackup().data;
+    const legacy = {
+      ...validBackup(),
+      schemaVersion: 2,
+      data: { ...data, recurring: { schedules: [], occurrences: [], preferences: null } },
+    };
+
+    expect(validateBackup(legacy)).toMatchObject({
+      schemaVersion: 1,
+      data: { categories: expect.any(Array), expenses: expect.any(Array), settings: expect.any(Array) },
+    });
+    expect(validateBackup(legacy).data).not.toHaveProperty('recurring');
   });
 
   test('rejects active names that conflict case-insensitively', () => {

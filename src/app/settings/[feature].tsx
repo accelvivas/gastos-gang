@@ -4,8 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { StreetBackground } from '@/components/StreetBackground';
-import { RecurringScreen } from '@/features/recurring/RecurringScreen';
-import { isLocalDayKey } from '@/lib/dates';
 import { AppearanceScreen } from '@/features/settings/components/AppearanceScreen';
 import { AboutScreen } from '@/features/settings/components/AboutScreen';
 import { BackupScreen, RestoreScreen } from '@/features/settings/components/BackupRestoreScreen';
@@ -26,17 +24,9 @@ const TITLES: Record<string, string> = {
 };
 
 export default function SettingsFeatureRoute() {
-  const { feature, scheduleId, dueDay } = useLocalSearchParams<{ feature: string; scheduleId?: string; dueDay?: string }>();
+  const { feature } = useLocalSearchParams<{ feature: string }>();
   const { colors } = useAppTheme();
   const title = TITLES[feature] ?? 'SETTINGS';
-  if (feature === 'recurring') {
-    const id = Number(scheduleId);
-    const target = Number.isSafeInteger(id) && id > 0 && typeof dueDay === 'string' && isLocalDayKey(dueDay)
-      ? { id, day: dueDay } : undefined;
-    return <RecurringScreen key={target ? `${id}:${dueDay}` : 'list'} target={target}
-      onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/settings')} />;
-  }
-
   if (feature === 'categories') {
     return <CategoryManagementScreen onBack={() => router.back()} />;
   }

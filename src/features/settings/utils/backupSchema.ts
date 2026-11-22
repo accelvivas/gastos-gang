@@ -1,15 +1,11 @@
 import { isLocalDayKey } from '@/lib/dates';
-import { validateRecurringBackup, type RecurringBackup } from '@/features/recurring/backup';
 import { MAX_AMOUNT_CENTAVOS } from '@/lib/money';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/repositories/categoriesRepo';
 
 export const BACKUP_FORMAT = 'gastos-gang-backup';
 export const BACKUP_SCHEMA_VERSION = 1;
-export const RECURRING_BACKUP_SCHEMA_VERSION = 2;
 
-export function backupVersion(data: GastosGangBackup['data']) {
-  return data.recurring ? RECURRING_BACKUP_SCHEMA_VERSION : BACKUP_SCHEMA_VERSION;
-}
+const LEGACY_RECURRING_BACKUP_VERSION = 2;
 export const MAX_BACKUP_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_BACKUP_CATEGORIES = 10_000;
 export const MAX_BACKUP_EXPENSES = 100_000;
@@ -41,14 +37,13 @@ export type BackupSetting =
 
 export type GastosGangBackup = {
   format: typeof BACKUP_FORMAT;
-  schemaVersion: typeof BACKUP_SCHEMA_VERSION | typeof RECURRING_BACKUP_SCHEMA_VERSION;
+  schemaVersion: typeof BACKUP_SCHEMA_VERSION | typeof LEGACY_RECURRING_BACKUP_VERSION;
   createdAt: string;
   appVersion: string;
   data: {
     categories: BackupCategory[];
     expenses: BackupExpense[];
     settings: BackupSetting[];
-    recurring?: RecurringBackup;
   };
 };
 
@@ -227,13 +222,13 @@ export function validateBackup(value: unknown): GastosGangBackup {
   if (root.format !== BACKUP_FORMAT) {
     return invalid('This is not a Gastos Gang backup.');
   }
-  if (root.schemaVersion !== BACKUP_SCHEMA_VERSION && root.schemaVersion !== RECURRING_BACKUP_SCHEMA_VERSION) {
+  if (root.schemaVersion !== BACKUP_SCHEMA_VERSION && root.schemaVersion !== LEGACY_RECURRING_BACKUP_VERSION) {
     return invalid('This backup version is not supported.');
   }
   const createdAt = requireIsoTimestamp(root.createdAt, 'Backup createdAt');
   const appVersion = requireString(root.appVersion, 'Backup appVersion', 64, { nonEmpty: true });
   const keys = ['categories', 'expenses', 'settings'];
-  if (root.schemaVersion === RECURRING_BACKUP_SCHEMA_VERSION) keys.push('recurring');
+  if (root.schemaVersion === LEGACY_RECURRING_BACKUP_VERSION) keys.push('recurring');
   const data = requireRecord(root.data, 'Backup data', keys);
   if (
     !Array.isArray(data.categories) ||
@@ -291,20 +286,12 @@ export function validateBackup(value: unknown): GastosGangBackup {
     return invalid('An enabled daily budget must include its saved limit.');
   }
 
-  let recurring: RecurringBackup | undefined;
-  if (root.schemaVersion === RECURRING_BACKUP_SCHEMA_VERSION) {
-    try {
-      recurring = validateRecurringBackup(data.recurring, categoryIds, new Set(expenses.map(({ id }) => id)));
-    } catch {
-      return invalid('Backup contains invalid recurring expense data.');
-    }
-  }
   return {
     format: BACKUP_FORMAT,
-    schemaVersion: root.schemaVersion,
+    schemaVersion: BACKUP_SCHEMA_VERSION,
     createdAt,
     appVersion,
-    data: recurring ? { categories, expenses, settings, recurring } : { categories, expenses, settings },
+    data: { categories, expenses, settings },
   };
 }
 

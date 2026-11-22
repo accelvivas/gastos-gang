@@ -12,7 +12,6 @@ import { useAppTheme } from '@/theme/use-app-theme';
 type SettingsFeature =
   | 'categories'
   | 'budget'
-  | 'recurring'
   | 'appearance'
   | 'export'
   | 'backup'
@@ -48,12 +47,6 @@ export default function SettingsRoute() {
             label="Daily Budget"
             subtitle="Set your spending guardrail"
             onPress={() => openFeature('budget')}
-          />
-          <SettingsRow
-            icon="repeat-outline"
-            label="Recurring Expenses"
-            subtitle="Manage regular gastos and payment reminders"
-            onPress={() => openFeature('recurring')}
           />
         </SettingsSection>
 
