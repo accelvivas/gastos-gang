@@ -51,6 +51,12 @@ describe('expenses repository', () => {
     expect(await expensesRepo.sumByDay(db, '2026-11-21', '2026-11-21', filters)).toEqual([
       { day: '2026-11-21', totalCentavos: 1402, count: 2 },
     ]);
+    expect(await expensesRepo.sumByDayKeys(db, ['2026-11-19', '2026-11-21', '2026-11-21'], {
+      search: filters.search,
+      categoryId: filters.categoryId,
+    })).toEqual([{ day: '2026-11-21', totalCentavos: 1402, count: 2 }]);
+    expect(await expensesRepo.sumByDayKeys(db, ['2026-11-20', '2026-11-21'], filters))
+      .toEqual([{ day: '2026-11-21', totalCentavos: 1402, count: 2 }]);
   });
 
   test('create, update, remove, and restore preserve the expected data', async () => {

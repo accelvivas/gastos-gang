@@ -9,6 +9,7 @@ import { AppToast } from '@/components/AppToast';
 import { AnimatedLaunchScreen } from '@/components/startup/AnimatedLaunchScreen';
 import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { useAppStartup } from '@/hooks/useAppStartup';
+import { clearLegacyRecurringNotifications } from '@/lib/legacyRecurringNotifications';
 import { streetColors } from '@/theme/tokens';
 import { applyNativeThemePreference, useAppTheme } from '@/theme/use-app-theme';
 
@@ -63,6 +64,12 @@ export default function RootLayout() {
       console.warn('Could not update the application background color.', error);
     });
   }, [rootBackground, themePreference]);
+
+  useEffect(() => {
+    clearLegacyRecurringNotifications().catch((error) => {
+      console.warn('Could not clear previous recurring payment reminders.', error);
+    });
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: rootBackground }}>

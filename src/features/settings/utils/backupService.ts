@@ -162,12 +162,13 @@ export async function createBackupSnapshot(
   let snapshot: GastosGangBackup | null = null;
 
   await db.withExclusiveTransactionAsync(async (txn) => {
+    const data = await readPersistentData(txn, pageSize);
     const candidate: GastosGangBackup = {
       format: BACKUP_FORMAT,
       schemaVersion: BACKUP_SCHEMA_VERSION,
       createdAt,
       appVersion,
-      data: await readPersistentData(txn, pageSize),
+      data,
     };
     snapshot = validateBackup(candidate);
   });

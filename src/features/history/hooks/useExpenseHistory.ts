@@ -13,16 +13,15 @@ const PAGE_SIZE = 30;
 async function totalsForRows(
   db: ReturnType<typeof useSQLiteContext>,
   rows: readonly ExpenseWithCategory[],
-  filters?: expensesRepo.ExpenseHistoryFilters
+  filters?: expensesRepo.ExpenseHistoryFilters,
+  loadedTotals?: ReadonlyMap<string, number>
 ): Promise<Map<string, number>> {
-  if (rows.length === 0) return new Map();
-  const keys = rows.map((row) => row.localDay).sort();
-  const fromKey = keys[0];
-  const toKey = keys.at(-1);
-  if (!fromKey || !toKey) return new Map();
-  const summaries = filters
-    ? await expensesRepo.sumByDay(db, fromKey, toKey, filters)
-    : await expensesRepo.sumByDay(db, fromKey, toKey);
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (!loadedTotals?.has(row.localDay)) keys.add(row.localDay);
+  }
+  if (keys.size === 0) return new Map();
+  const summaries = await expensesRepo.sumByDayKeys(db, [...keys], filters);
   return new Map(summaries.map((summary) => [summary.day, summary.totalCentavos]));
 }
 
@@ -109,10 +108,10 @@ export function useExpenseHistory(
       if (!mountedRef.current || version !== requestVersionRef.current) return;
       const existingIds = new Set(expenses.map((expense) => expense.id));
       const merged = [...expenses, ...rows.filter((row) => !existingIds.has(row.id))];
-      const totals = await totalsForRows(db, rows, filters);
+      const totals = await totalsForRows(db, rows, filters, totalsByDay);
       if (!mountedRef.current || version !== requestVersionRef.current) return;
       setExpenses(merged);
-      setTotalsByDay((previous) => new Map([...previous, ...totals]));
+      if (totals.size > 0) setTotalsByDay((previous) => new Map([...previous, ...totals]));
       setHasMore(rows.length === PAGE_SIZE);
     } catch {
       if (mountedRef.current && version === requestVersionRef.current) {
@@ -124,7 +123,7 @@ export function useExpenseHistory(
         setIsLoadingMore(false);
       }
     }
-  }, [criteriaPending, db, expenses, filters, hasMore]);
+  }, [criteriaPending, db, expenses, filters, hasMore, totalsByDay]);
 
   const { deleteExpense, undoDelete } = useDeleteExpense({ now });
 

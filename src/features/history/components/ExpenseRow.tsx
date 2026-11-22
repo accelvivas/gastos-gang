@@ -30,7 +30,9 @@ export const ExpenseRow = memo(function ExpenseRow({ expense, onDelete, onPress 
   return (
     <Pressable
       accessibilityHint="Opens this expense for editing"
-      accessibilityLabel={[expense.categoryName, expense.categoryIsArchived ? 'Archived category' : '', amount, time, expense.note].filter(Boolean).join(', ')}
+      accessibilityLabel={[expense.categoryName, expense.categoryIsArchived ? 'Archived category' : '', amount, time,
+        expense.note,
+      ].filter(Boolean).join(', ')}
       accessibilityRole="button"
       accessibilityActions={onDelete ? [{ name: 'delete', label: 'Delete expense' }] : undefined}
       onAccessibilityAction={(event) => {

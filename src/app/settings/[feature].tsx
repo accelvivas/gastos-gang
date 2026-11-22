@@ -27,7 +27,6 @@ export default function SettingsFeatureRoute() {
   const { feature } = useLocalSearchParams<{ feature: string }>();
   const { colors } = useAppTheme();
   const title = TITLES[feature] ?? 'SETTINGS';
-
   if (feature === 'categories') {
     return <CategoryManagementScreen onBack={() => router.back()} />;
   }

@@ -12,7 +12,56 @@ describe('database migrations', () => {
 
     expect(version?.user_version).toBe(MIGRATIONS.at(-1)?.version);
     expect(categories?.count).toBe(6);
+    expect(await db.getAllAsync(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'recurring_%'"
+    )).toEqual([]);
     db.close();
+  });
+
+  test('removes legacy recurring data while preserving ordinary expenses', async () => {
+    const db = new TestDb();
+    try {
+      await db.execAsync('PRAGMA foreign_keys = ON;');
+      for (const migration of MIGRATIONS.filter(({ version }) => version <= 4)) {
+        await migration.up(db);
+        await db.execAsync(migration.userVersionStatement);
+      }
+
+      const category = await db.getFirstAsync<{ id: number }>('SELECT id FROM categories LIMIT 1');
+      expect(category).not.toBeNull();
+      await db.runAsync(
+        `INSERT INTO expenses (id, amount_centavos, category_id, created_at, local_day, updated_at)
+         VALUES (42, 12345, ?, 1, '2026-11-21', 1)`,
+        [category!.id]
+      );
+      const schedule = await db.runAsync(
+        `INSERT INTO recurring_expenses
+          (name, amount, category_id, frequency, start_day, due_time, mode, offsets, state, cursor, created_at, updated_at)
+         VALUES ('Monthly', 500, ?, 'monthly', '2026-11-01', '09:00', 'reminder', 1, 'active', 0, 1, 1)`,
+        [category!.id]
+      );
+      await db.runAsync(
+        `INSERT INTO recurring_occurrences (schedule_id, due_day, name, amount, category_id)
+         VALUES (?, '2026-11-21', 'Monthly', 500, ?)`,
+        [schedule.lastInsertRowId, category!.id]
+      );
+      await db.runAsync(
+        `INSERT INTO recurring_notifications (id, schedule_id, due_day, fire_at)
+         VALUES ('gastos-payment:1:2026-11-21:1', ?, '2026-11-21', 1)`,
+        [schedule.lastInsertRowId]
+      );
+
+      await runMigrations(db);
+
+      expect(await db.getFirstAsync('PRAGMA user_version')).toEqual({ user_version: 5 });
+      expect(await db.getAllAsync(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'recurring_%'"
+      )).toEqual([]);
+      expect(await db.getFirstAsync('SELECT id FROM expenses WHERE id = 42')).toEqual({ id: 42 });
+      expect(await db.getAllAsync('PRAGMA foreign_key_check')).toEqual([]);
+    } finally {
+      db.close();
+    }
   });
 
   test('running migrations repeatedly changes nothing', async () => {

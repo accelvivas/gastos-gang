@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSpring, withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -14,38 +13,10 @@ import { spacing, streetColors } from '@/theme/tokens';
 
 const EXIT_START = 1900;
 const DURATION = 2220;
-const STROKES = [
-  { angle: '27deg', x: 0.14, y: -0.45, start: 560 },
-  { angle: '57deg', x: 0.35, y: -0.37, start: 625 },
-  { angle: '83deg', x: 0.43, y: -0.17, start: 690 },
-] as const;
-
 function reveal(time: number, start: number, end: number) {
   'worklet';
   const t = Math.max(0, Math.min(1, (time - start) / (end - start)));
   return t * t * (3 - 2 * t);
-}
-
-function ImpactStroke({ stroke, size, clock }: {
-  stroke: (typeof STROKES)[number];
-  size: number;
-  clock: SharedValue<number>;
-}) {
-  const animated = useAnimatedStyle(() => {
-    const time = clock.get();
-    const travel = reveal(time, stroke.start, stroke.start + 280);
-    return {
-      opacity: reveal(time, stroke.start, stroke.start + 80) * (1 - reveal(time, stroke.start + 95, stroke.start + 280)),
-      transform: [
-        { translateX: stroke.x * size * (0.88 + 0.31 * travel) },
-        { translateY: stroke.y * size * (0.88 + 0.31 * travel) },
-        { rotate: stroke.angle },
-        { scaleY: 0.45 + travel * 0.65 },
-      ],
-    };
-  });
-
-  return <Animated.View style={[styles.stroke, animated]} />;
 }
 
 type AnimatedLaunchScreenProps = {
@@ -117,11 +88,6 @@ export function AnimatedLaunchScreen({ onNativeSplashReady, onCompleted }: Anima
       style={[styles.overlay, !reducedMotion && overlay]}>
       <SafeAreaView style={styles.centered}>
         <View style={styles.logoFrame}>
-          {!reducedMotion && (
-            <View pointerEvents="none" style={styles.decorations}>
-              {STROKES.map((stroke) => <ImpactStroke key={stroke.start} stroke={stroke} size={size} clock={clock} />)}
-            </View>
-          )}
           <LaunchLogo size={size} animatedStyle={reducedMotion ? undefined : logo} />
         </View>
         <LaunchWordmark animatedStyle={reducedMotion ? undefined : wordmark}
@@ -136,6 +102,4 @@ const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFill, zIndex: 1000, backgroundColor: streetColors.background },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   logoFrame: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
-  decorations: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  stroke: { position: 'absolute', width: 3, height: 15, borderRadius: 2, backgroundColor: streetColors.orange },
 });

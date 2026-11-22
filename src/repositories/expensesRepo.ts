@@ -463,6 +463,27 @@ export async function sumByDay(
   filters?: ExpenseHistoryFilters
 ): Promise<DaySummary[]> {
   validateDayRange(fromKey, toKey);
+  return readDayTotals(db, 'e.local_day BETWEEN ? AND ?', [fromKey, toKey], filters);
+}
+
+export async function sumByDayKeys(
+  db: DbLike,
+  dayKeys: readonly string[],
+  filters?: ExpenseHistoryFilters
+): Promise<DaySummary[]> {
+  const keys = [...new Set(dayKeys)];
+  if (keys.length === 0) return [];
+  for (const key of keys) validateDayRange(key, key);
+  const placeholders = keys.map(() => '?').join(', ');
+  return readDayTotals(db, `e.local_day IN (${placeholders})`, keys, filters);
+}
+
+async function readDayTotals(
+  db: DbLike,
+  dayPredicate: string,
+  dayArgs: string[],
+  filters?: ExpenseHistoryFilters
+): Promise<DaySummary[]> {
   try {
     const { clauses, args } = historyPredicates(filters);
     const extra = clauses.length ? `AND ${clauses.join(' AND ')}` : '';
@@ -473,10 +494,10 @@ export async function sumByDay(
     }>(
       `SELECT e.local_day AS day, SUM(e.amount_centavos) AS total_centavos, COUNT(*) AS count
        FROM expenses e JOIN categories c ON c.id = e.category_id
-       WHERE e.local_day BETWEEN ? AND ? ${extra}
+       WHERE ${dayPredicate} ${extra}
        GROUP BY e.local_day
        ORDER BY e.local_day ASC`,
-      [fromKey, toKey, ...args]
+      [...dayArgs, ...args]
     );
     return rows.map((row) => ({
       day: row.day,

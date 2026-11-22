@@ -41,10 +41,10 @@ export const DailySpendingChart = memo(function DailySpendingChart({ days, bigge
       onPress: () => setSelectedKey(row.day),
     };
   }), [days, period]);
-  const chartData = chartDays.map((bar, i) => ({
+  const chartData = useMemo(() => chartDays.map((bar, i) => ({
     ...bar,
     frontColor: days[i]?.day === biggestDay?.day ? colors.orange : i === index ? colors.primary : colors.olive,
-  }));
+  })), [chartDays, colors.olive, colors.orange, colors.primary, days, biggestDay?.day, index]);
   const stepValue = Math.ceil(max / 3);
   const axisLabels = [0, 1, 2, 3].map((step) => formatPeso(Math.min(stepValue * step, Number.MAX_SAFE_INTEGER), { hideZeroDecimals: true }));
 

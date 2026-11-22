@@ -4,6 +4,8 @@ import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/repositories/categoriesRepo';
 
 export const BACKUP_FORMAT = 'gastos-gang-backup';
 export const BACKUP_SCHEMA_VERSION = 1;
+
+const LEGACY_RECURRING_BACKUP_VERSION = 2;
 export const MAX_BACKUP_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_BACKUP_CATEGORIES = 10_000;
 export const MAX_BACKUP_EXPENSES = 100_000;
@@ -35,7 +37,7 @@ export type BackupSetting =
 
 export type GastosGangBackup = {
   format: typeof BACKUP_FORMAT;
-  schemaVersion: typeof BACKUP_SCHEMA_VERSION;
+  schemaVersion: typeof BACKUP_SCHEMA_VERSION | typeof LEGACY_RECURRING_BACKUP_VERSION;
   createdAt: string;
   appVersion: string;
   data: {
@@ -220,12 +222,14 @@ export function validateBackup(value: unknown): GastosGangBackup {
   if (root.format !== BACKUP_FORMAT) {
     return invalid('This is not a Gastos Gang backup.');
   }
-  if (root.schemaVersion !== BACKUP_SCHEMA_VERSION) {
+  if (root.schemaVersion !== BACKUP_SCHEMA_VERSION && root.schemaVersion !== LEGACY_RECURRING_BACKUP_VERSION) {
     return invalid('This backup version is not supported.');
   }
   const createdAt = requireIsoTimestamp(root.createdAt, 'Backup createdAt');
   const appVersion = requireString(root.appVersion, 'Backup appVersion', 64, { nonEmpty: true });
-  const data = requireRecord(root.data, 'Backup data', ['categories', 'expenses', 'settings']);
+  const keys = ['categories', 'expenses', 'settings'];
+  if (root.schemaVersion === LEGACY_RECURRING_BACKUP_VERSION) keys.push('recurring');
+  const data = requireRecord(root.data, 'Backup data', keys);
   if (
     !Array.isArray(data.categories) ||
     data.categories.length > MAX_BACKUP_CATEGORIES ||

@@ -57,6 +57,11 @@ test('keeps chart axes, labels, and data series theme-readable', async () => {
   assertChartPalette('dark');
 
   const darkProps = mockChart.mock.calls.at(-1)?.[0] as ChartProps;
+  await fireEvent(screen.getByTestId('summary-daily-chart', { includeHiddenElements: true }), 'layout', {
+    nativeEvent: { layout: { width: 340, height: 180, x: 0, y: 0 } },
+  });
+  expect((mockChart.mock.calls.at(-1)?.[0] as ChartProps).data).toBe(darkProps.data);
+
   await act(async () => darkProps.data[1]!.onPress());
   expect((mockChart.mock.calls.at(-1)?.[0] as ChartProps).data[1]!.frontColor)
     .toBe(themes.dark.primary);
