@@ -15,7 +15,7 @@ jest.mock('expo-router', () => ({
 jest.mock('@/features/history/hooks/useDeleteExpense', () => ({
   useDeleteExpense: () => ({ deleteExpense: jest.fn(), undoDelete: jest.fn() }),
 }));
-jest.mock('@/repositories/expensesRepo', () => ({ listPage: jest.fn(), sumByDay: jest.fn() }));
+jest.mock('@/repositories/expensesRepo', () => ({ listPage: jest.fn(), sumByDayKeys: jest.fn() }));
 
 function row(id: number, createdAt: number, localDay = '2026-11-21'): ExpenseWithCategory {
   return {
@@ -28,7 +28,7 @@ function row(id: number, createdAt: number, localDay = '2026-11-21'): ExpenseWit
 describe('useExpenseHistory', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.mocked(expensesRepo.sumByDay).mockResolvedValue([
+    jest.mocked(expensesRepo.sumByDayKeys).mockResolvedValue([
       { day: '2026-11-21', totalCentavos: 99_999, count: 40 },
     ]);
   });
@@ -39,7 +39,7 @@ describe('useExpenseHistory', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(expensesRepo.listPage).toHaveBeenCalledWith(mockDb, { limit: 30 });
-    expect(expensesRepo.sumByDay).toHaveBeenCalledWith(mockDb, '2026-11-21', '2026-11-21');
+    expect(expensesRepo.sumByDayKeys).toHaveBeenCalledWith(mockDb, ['2026-11-21'], undefined);
     expect(result.current.sections[0]?.totalCentavos).toBe(99_999);
     expect(result.current.hasMore).toBe(false);
   });
@@ -71,6 +71,27 @@ describe('useExpenseHistory', () => {
     expect(result.current.expenses.map((expense) => expense.id)).toHaveLength(33);
     expect(new Set(result.current.expenses.map((expense) => expense.id)).size).toBe(33);
     expect(result.current.hasMore).toBe(false);
+    expect(expensesRepo.sumByDayKeys).toHaveBeenCalledTimes(1);
+  });
+
+  test('fetches only new day subtotals on pagination and recalculates existing days on refresh', async () => {
+    const firstPage = Array.from({ length: 30 }, (_, index) => row(100 - index, 1_000 - index));
+    jest.mocked(expensesRepo.listPage)
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce([row(70, 970), row(69, 969, '2026-10-03')])
+      .mockResolvedValueOnce([row(100, 1000)]);
+    const totals = jest.mocked(expensesRepo.sumByDayKeys);
+    totals.mockResolvedValueOnce([{ day: '2026-11-21', totalCentavos: 500, count: 31 }])
+      .mockResolvedValueOnce([{ day: '2026-10-03', totalCentavos: 250, count: 1 }])
+      .mockResolvedValueOnce([{ day: '2026-11-21', totalCentavos: 600, count: 1 }]);
+    const { result } = await renderHook(() => useExpenseHistory());
+    await waitFor(() => expect(result.current.expenses).toHaveLength(30));
+
+    await act(() => result.current.loadMore());
+    expect(totals).toHaveBeenLastCalledWith(mockDb, ['2026-10-03'], undefined);
+    expect(result.current.sections.map(({ totalCentavos }) => totalCentavos)).toEqual([500, 250]);
+    await act(() => result.current.refresh());
+    expect(result.current.sections.map(({ totalCentavos }) => totalCentavos)).toEqual([600]);
   });
 
   test('invalidates in-flight pagination when replacement data triggers a refresh', async () => {

@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.accelvivas.gastosgang",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#111714",
         "foregroundImage": "./assets/images/gg-shaka-adaptive-foreground.png"
