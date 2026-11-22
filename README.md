@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/GASTOS GANG LOGO.png" width="120" alt="Official Gastos Gang logo">
+  <img src="assets/images/gastos-gang-icon.png" width="120" alt="Official Gastos Gang logo">
 </p>
 
 # Gastos Gang
