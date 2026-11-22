@@ -30,7 +30,9 @@ export const ExpenseRow = memo(function ExpenseRow({ expense, onDelete, onPress 
   return (
     <Pressable
       accessibilityHint="Opens this expense for editing"
-      accessibilityLabel={[expense.categoryName, expense.categoryIsArchived ? 'Archived category' : '', amount, time, expense.note].filter(Boolean).join(', ')}
+      accessibilityLabel={[expense.categoryName, expense.categoryIsArchived ? 'Archived category' : '', amount, time,
+        expense.note, expense.recurringSource === 'auto' ? 'Recurring' : expense.recurringSource === 'paid' ? 'Recurring payment' : '',
+      ].filter(Boolean).join(', ')}
       accessibilityRole="button"
       accessibilityActions={onDelete ? [{ name: 'delete', label: 'Delete expense' }] : undefined}
       onAccessibilityAction={(event) => {
@@ -48,6 +50,9 @@ export const ExpenseRow = memo(function ExpenseRow({ expense, onDelete, onPress 
         <Text numberOfLines={1} style={[styles.category, { color: colors.text }]}>{expense.categoryName}</Text>
         <Text numberOfLines={1} style={[styles.time, { color: colors.textMuted }]}>{time}{expense.note ? ` · ${expense.note}` : ''}</Text>
         {expense.categoryIsArchived ? <Text style={[styles.archived, { color: colors.orange }]}>ARCHIVED</Text> : null}
+        {expense.recurringSource ? <Text style={[styles.archived, { color: colors.textMuted }]}>
+          {expense.recurringSource === 'auto' ? 'RECURRING' : 'RECURRING PAYMENT'}
+        </Text> : null}
       </View>
       <Text style={[styles.amount, { color: colors.text }]} adjustsFontSizeToFit numberOfLines={1}>{amount}</Text>
       <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />

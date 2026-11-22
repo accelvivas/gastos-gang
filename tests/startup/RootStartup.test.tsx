@@ -20,6 +20,7 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('react-native-gesture-handler', () => ({ GestureHandlerRootView: jest.requireActual('react-native').View }));
 jest.mock('@/components/AppToast', () => ({ AppToast: () => null }));
+jest.mock('@/features/recurring/RecurringLifecycle', () => ({ RecurringLifecycle: () => null }));
 jest.mock('@/db/DatabaseProvider', () => ({
   DatabaseProvider: function MockDatabaseProvider({ children, onError }: PropsWithChildren<{ onError: (error: Error) => void }>) {
     mockUseEffect(() => { if (mockDatabaseState === 'error') onError(new Error('Initialization failed')); }, [onError]);

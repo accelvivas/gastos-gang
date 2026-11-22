@@ -19,6 +19,7 @@ credentials.json
 *.aab
 *.p8
 *.p12
+*.pfx
 *.key
 *.mobileprovision
 
@@ -34,8 +35,19 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# Local environment and credential files
+.env
+.env.*
+.envrc
+!.env.example
+!.env.sample
+.npmrc.local
+.netrc
+.git-credentials
+secrets.local.json
+*.secrets.json
+service-account*.json
+serviceAccountKey*.json
 
 # typescript
 *.tsbuildinfo

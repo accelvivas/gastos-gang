@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppToast } from '@/components/AppToast';
 import { AnimatedLaunchScreen } from '@/components/startup/AnimatedLaunchScreen';
 import { DatabaseProvider } from '@/db/DatabaseProvider';
+import { RecurringLifecycle } from '@/features/recurring/RecurringLifecycle';
 import { useAppStartup } from '@/hooks/useAppStartup';
 import { streetColors } from '@/theme/tokens';
 import { applyNativeThemePreference, useAppTheme } from '@/theme/use-app-theme';
@@ -88,6 +89,7 @@ export default function RootLayout() {
             />
             {__DEV__ ? <Stack.Screen name="dev-db" options={{ title: 'Database check' }} /> : null}
           </Stack>
+          <RecurringLifecycle />
           <StatusBar style={launching || isDark ? 'light' : 'dark'} />
           <AppToast />
           {(startup.phase === 'ready' || startup.phase === 'animating') ? (

@@ -16,6 +16,7 @@ export type Expense = {
   createdAt: number;
   localDay: string;
   updatedAt: number;
+  recurringOccurrence?: { scheduleId: number; dueDay: string };
 };
 
 export type ExpenseWithCategory = Expense & {
@@ -23,6 +24,7 @@ export type ExpenseWithCategory = Expense & {
   categoryIcon: string;
   categoryColor: string;
   categoryIsArchived: boolean;
+  recurringSource?: 'auto' | 'paid';
 };
 
 export type ExportExpense = ExpenseWithCategory;
@@ -52,6 +54,7 @@ export type ExpenseWithCategoryRow = ExpenseRow & {
   category_icon: string;
   category_color: string;
   category_is_archived: number;
+  recurring_source?: 'auto' | 'paid' | null;
 };
 
 export function mapCategoryRow(row: CategoryRow): Category {
@@ -85,5 +88,6 @@ export function mapExpenseWithCategoryRow(row: ExpenseWithCategoryRow): ExpenseW
     categoryIcon: row.category_icon,
     categoryColor: row.category_color,
     categoryIsArchived: row.category_is_archived === 1,
+    ...(row.recurring_source ? { recurringSource: row.recurring_source } : {}),
   };
 }

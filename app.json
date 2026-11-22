@@ -33,7 +33,15 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/payment-notification.png",
+          "color": "#C9FC39",
+          "defaultChannel": "payment-reminders"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
