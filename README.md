@@ -1,7 +1,5 @@
 <p align="center">
 <<<<<<< HEAD
-  <img src="assets/images/gg-shaka-icon.png" width="120" alt="Official Gastos Gang logo">
-=======
   <img src="assets/images/GG Shaka LOGO.png" width="120" alt="Official Gastos Gang logo">
 >>>>>>> 7ba94450d234e324712b0f640e887a3c452f2db8
 </p>
